@@ -9,13 +9,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, TestTube, ArrowRight } from 'lucide-react';
 
 const Admin = () => {
   const { state, updateAdminConfig, addTelemetryEvent } = useAppContext();
   const [brandVoice, setBrandVoice] = useState(state.admin_config.brand_voice);
+  const [previewText, setPreviewText] = useState('Hi, I understand you are having issues with your account. Let me check this for you.');
+  const [ticketNumber, setTicketNumber] = useState('T-1001');
 
   const toggleFeature = (key: string) => {
     const newFeatures = {
@@ -39,6 +42,49 @@ const Admin = () => {
     updateAdminConfig({ brand_voice: brandVoice });
     addTelemetryEvent({ event: 'brand_voice_updated', adminId: 'admin_1' });
     toast.success('Brand voice settings saved');
+  };
+
+  const applyBrandTone = (text: string): string => {
+    let output = text;
+    
+    // Apply formality
+    if (brandVoice.formality === 'Formal') {
+      output = output.replace(/can't/g, 'cannot').replace(/I'm/g, 'I am').replace(/won't/g, 'will not');
+    } else if (brandVoice.formality === 'Informal') {
+      output = output.replace(/cannot/g, "can't").replace(/I am/g, "I'm").replace(/will not/g, "won't");
+    }
+    
+    // Apply archetype tone
+    const name = 'there';
+    if (brandVoice.archetype === 'Friendly') {
+      output = `Hi ${name}! 😊 ` + output;
+    } else if (brandVoice.archetype === 'Empathetic') {
+      output = `I truly understand your concern. ` + output;
+    } else if (brandVoice.archetype === 'Formal') {
+      output = `Dear Customer, ` + output;
+    } else if (brandVoice.archetype === 'Direct') {
+      output = output.replace(/I understand /g, '').replace(/please /g, '');
+    }
+    
+    // Apply custom lexicon
+    if (brandVoice.custom_lexicon_text) {
+      const lexicon = brandVoice.custom_lexicon_text.split('\n');
+      lexicon.forEach(rule => {
+        const match = rule.match(/(.+?)\s*\(not\s+(.+?)\)/i);
+        if (match) {
+          const [, preferred, avoid] = match;
+          const regex = new RegExp(avoid.trim(), 'gi');
+          output = output.replace(regex, preferred.trim());
+        }
+      });
+    }
+    
+    // Add company name if configured
+    if (brandVoice.company_name) {
+      output = output.replace(/\[Company\]/g, brandVoice.company_name);
+    }
+    
+    return `[Simulated Brand Tone Applied] ${output}`;
   };
 
   const updateVerifierTiming = (timing: 'before_send' | 'after_send') => {
@@ -122,178 +168,317 @@ const Admin = () => {
               </p>
             </Card>
 
-            {/* Brand Voice Configuration */}
+            {/* Brand Voice Configuration - Combined */}
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Module 1: Brand Voice Configuration</h2>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="company_name">Company Name</Label>
-                  <Input
-                    id="company_name"
-                    value={brandVoice.company_name}
-                    onChange={(e) => setBrandVoice({ ...brandVoice, company_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="industry">Industry</Label>
-                  <Select
-                    value={brandVoice.industry}
-                    onValueChange={(v) => setBrandVoice({ ...brandVoice, industry: v })}
-                  >
-                    <SelectTrigger id="industry">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SaaS">SaaS</SelectItem>
-                      <SelectItem value="E-commerce">E-commerce</SelectItem>
-                      <SelectItem value="Finance">Finance</SelectItem>
-                      <SelectItem value="Healthcare">Healthcare</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="archetype">Primary Tone</Label>
-                  <Select
-                    value={brandVoice.archetype}
-                    onValueChange={(v) => setBrandVoice({ ...brandVoice, archetype: v })}
-                  >
-                    <SelectTrigger id="archetype">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Friendly">Friendly</SelectItem>
-                      <SelectItem value="Empathetic">Empathetic</SelectItem>
-                      <SelectItem value="Formal">Formal</SelectItem>
-                      <SelectItem value="Direct">Direct</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="sample_rules">Brand Communication Guidelines</Label>
-                  <Textarea
-                    id="sample_rules"
-                    value={brandVoice.sample_rules}
-                    onChange={(e) => setBrandVoice({ ...brandVoice, sample_rules: e.target.value })}
-                    placeholder="e.g., We use a friendly, professional tone..."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="formality">Formality Level</Label>
-                  <Select
-                    value={brandVoice.formality}
-                    onValueChange={(v) => setBrandVoice({ ...brandVoice, formality: v })}
-                  >
-                    <SelectTrigger id="formality">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Informal">Informal</SelectItem>
-                      <SelectItem value="Neutral">Neutral</SelectItem>
-                      <SelectItem value="Formal">Formal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={saveBrandVoice}>Save Brand Voice</Button>
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold mb-2">Brand Voice Configuration</h2>
+                <p className="text-muted-foreground">
+                  Configure your company's communication style and tone
+                </p>
               </div>
-            </Card>
 
-            {/* Learning Sources */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Module 2: Learning Sources</h2>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="example_replies">Example Replies (Paste 3-5)</Label>
-                  <Textarea
-                    id="example_replies"
-                    value={brandVoice.learning_example_replies}
-                    onChange={(e) => setBrandVoice({ ...brandVoice, learning_example_replies: e.target.value })}
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="learning_urls">Website & KB URLs (One per line)</Label>
-                  <Textarea
-                    id="learning_urls"
-                    value={brandVoice.learning_urls}
-                    onChange={(e) => setBrandVoice({ ...brandVoice, learning_urls: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="custom_lexicon_text">Company Lexicon & Terminology</Label>
-                  <Textarea
-                    id="custom_lexicon_text"
-                    value={brandVoice.custom_lexicon_text}
-                    onChange={(e) => setBrandVoice({ ...brandVoice, custom_lexicon_text: e.target.value })}
-                    rows={3}
-                    placeholder="workspace (not account)&#10;team member (not user)"
-                  />
-                </div>
-                <Button onClick={saveBrandVoice}>Save Learning Sources</Button>
-              </div>
-            </Card>
+              <Tabs defaultValue="basics" className="w-full">
+                <TabsList className="grid w-full grid-cols-4 mb-6">
+                  <TabsTrigger value="basics">Basics</TabsTrigger>
+                  <TabsTrigger value="learning">Learning Sources</TabsTrigger>
+                  <TabsTrigger value="archetypes">Response Patterns</TabsTrigger>
+                  <TabsTrigger value="mystyle">My Style</TabsTrigger>
+                </TabsList>
 
-            {/* Response Archetypes */}
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Module 3: Response Archetypes</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Define your response archetypes below. Use headings for each archetype.
-              </p>
-              <Textarea
-                value={brandVoice.response_archetypes_text}
-                onChange={(e) => setBrandVoice({ ...brandVoice, response_archetypes_text: e.target.value })}
-                rows={10}
-                className="font-mono text-xs"
-              />
-              <Button onClick={saveBrandVoice} className="mt-4">Save Archetypes</Button>
-            </Card>
+                <TabsContent value="basics" className="space-y-4">
+                  <div>
+                    <Label htmlFor="company_name">Company Name</Label>
+                    <Input
+                      id="company_name"
+                      value={brandVoice.company_name}
+                      onChange={(e) => setBrandVoice({ ...brandVoice, company_name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="industry">Industry</Label>
+                    <Select
+                      value={brandVoice.industry}
+                      onValueChange={(v) => setBrandVoice({ ...brandVoice, industry: v })}
+                    >
+                      <SelectTrigger id="industry">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SaaS">SaaS</SelectItem>
+                        <SelectItem value="E-commerce">E-commerce</SelectItem>
+                        <SelectItem value="Finance">Finance</SelectItem>
+                        <SelectItem value="Healthcare">Healthcare</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="archetype">Primary Tone</Label>
+                    <Select
+                      value={brandVoice.archetype}
+                      onValueChange={(v) => setBrandVoice({ ...brandVoice, archetype: v })}
+                    >
+                      <SelectTrigger id="archetype">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Friendly">Friendly</SelectItem>
+                        <SelectItem value="Empathetic">Empathetic</SelectItem>
+                        <SelectItem value="Formal">Formal</SelectItem>
+                        <SelectItem value="Direct">Direct</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="sample_rules">Brand Communication Guidelines</Label>
+                    <Textarea
+                      id="sample_rules"
+                      value={brandVoice.sample_rules}
+                      onChange={(e) => setBrandVoice({ ...brandVoice, sample_rules: e.target.value })}
+                      placeholder="e.g., We use a friendly, professional tone..."
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="formality">Formality Level</Label>
+                    <Select
+                      value={brandVoice.formality}
+                      onValueChange={(v) => setBrandVoice({ ...brandVoice, formality: v })}
+                    >
+                      <SelectTrigger id="formality">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Informal">Informal</SelectItem>
+                        <SelectItem value="Neutral">Neutral</SelectItem>
+                        <SelectItem value="Formal">Formal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
 
-            {/* My Style Configuration */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-xl font-semibold">My Style Configuration</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Configure your personal writing style for the "Write in My Style" feature
+                <TabsContent value="learning" className="space-y-4">
+                  <div>
+                    <Label htmlFor="example_replies">Example Replies (Paste 3-5)</Label>
+                    <Textarea
+                      id="example_replies"
+                      value={brandVoice.learning_example_replies}
+                      onChange={(e) => setBrandVoice({ ...brandVoice, learning_example_replies: e.target.value })}
+                      rows={4}
+                      placeholder="Paste example replies that represent your brand voice..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="learning_urls">Website & KB URLs (One per line)</Label>
+                    <Textarea
+                      id="learning_urls"
+                      value={brandVoice.learning_urls}
+                      onChange={(e) => setBrandVoice({ ...brandVoice, learning_urls: e.target.value })}
+                      rows={3}
+                      placeholder="https://example.com/kb"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="custom_lexicon_text">Company Lexicon & Terminology</Label>
+                    <Textarea
+                      id="custom_lexicon_text"
+                      value={brandVoice.custom_lexicon_text}
+                      onChange={(e) => setBrandVoice({ ...brandVoice, custom_lexicon_text: e.target.value })}
+                      rows={3}
+                      placeholder="workspace (not account)&#10;team member (not user)"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Format: "preferred term (not avoided term)" - one per line
+                    </p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="archetypes" className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Define response patterns for different situations. Use headings for each pattern.
                   </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const agentReplies = state.tickets
-                      .flatMap(t => t.messages.filter(m => m.from === 'agent').map(m => m.text))
-                      .slice(-5)
-                      .join('\n\n');
-                    setBrandVoice({
-                      ...brandVoice,
-                      my_style_examples: agentReplies || 'No agent replies found yet.'
-                    });
-                    toast.success('Loaded examples from your recent tickets');
-                  }}
-                >
+                  <Textarea
+                    value={brandVoice.response_archetypes_text}
+                    onChange={(e) => setBrandVoice({ ...brandVoice, response_archetypes_text: e.target.value })}
+                    rows={10}
+                    className="font-mono text-xs"
+                    placeholder="## Apology&#10;1. Acknowledge the issue&#10;2. Express empathy&#10;Example: ..."
+                  />
+                </TabsContent>
+
+                <TabsContent value="mystyle" className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold">Personal Writing Style</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure your personal style for "Write in My Style" feature
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const agentReplies = state.tickets
+                          .flatMap(t => t.messages.filter(m => m.from === 'agent').map(m => m.text))
+                          .slice(-5)
+                          .join('\n\n');
+                        setBrandVoice({
+                          ...brandVoice,
+                          my_style_examples: agentReplies || 'No agent replies found yet.'
+                        });
+                        toast.success('Loaded examples from your recent tickets');
+                      }}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Auto-learn from my tickets
+                    </Button>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="my_style_examples">Example replies that represent your style</Label>
+                    <Textarea
+                      id="my_style_examples"
+                      value={brandVoice.my_style_examples}
+                      onChange={(e) => setBrandVoice({ ...brandVoice, my_style_examples: e.target.value })}
+                      placeholder="Paste 3-5 example replies that represent your personal writing style..."
+                      rows={6}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      The AI will analyze these examples to learn your tone, vocabulary, and sentence structure.
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="mt-6">
+                <Button onClick={saveBrandVoice} size="lg">
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Auto-learn from my tickets
+                  Save Brand Voice Settings
                 </Button>
               </div>
-              
+            </Card>
+
+            {/* Test Brand Tone */}
+            <Card className="p-6">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold mb-2 flex items-center gap-2">
+                  <TestTube className="h-6 w-6" />
+                  Test Brand Tone
+                </h2>
+                <p className="text-muted-foreground">
+                  Preview how your brand tone settings will transform text
+                </p>
+              </div>
+
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="my_style_examples">Example replies that represent your style</Label>
+                  <Label htmlFor="preview_text">Input Text</Label>
                   <Textarea
-                    id="my_style_examples"
-                    value={brandVoice.my_style_examples}
-                    onChange={(e) => setBrandVoice({ ...brandVoice, my_style_examples: e.target.value })}
-                    placeholder="Paste 3-5 example replies that represent your personal writing style..."
-                    rows={6}
+                    id="preview_text"
+                    value={previewText}
+                    onChange={(e) => setPreviewText(e.target.value)}
+                    rows={3}
+                    placeholder="Type or paste text to see how it will be transformed..."
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    The AI will analyze these examples to learn your tone, vocabulary, and sentence structure.
-                    Click "Auto-learn" to pull from your recent ticket replies.
-                  </p>
                 </div>
-                <Button onClick={saveBrandVoice}>Save My Style</Button>
+
+                <div className="flex items-center gap-4">
+                  <div className="h-px flex-1 bg-border" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                <div>
+                  <Label>Output with Brand Tone</Label>
+                  <div className="mt-2 p-4 rounded-lg bg-muted/50 border min-h-[100px]">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {applyBrandTone(previewText)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Ticket Comparison */}
+            <Card className="p-6">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold mb-2">Ticket Comparison</h2>
+                <p className="text-muted-foreground">
+                  Compare actual agent replies with brand tone suggestions
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="ticket_number">Ticket Number</Label>
+                    <Input
+                      id="ticket_number"
+                      value={ticketNumber}
+                      onChange={(e) => setTicketNumber(e.target.value)}
+                      placeholder="e.g., T-1001"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={() => {
+                      const ticket = state.tickets.find(t => t.id === ticketNumber);
+                      if (!ticket) {
+                        toast.error('Ticket not found');
+                      } else {
+                        toast.success('Comparison loaded');
+                      }
+                    }}>
+                      Load Comparison
+                    </Button>
+                  </div>
+                </div>
+
+                {(() => {
+                  const ticket = state.tickets.find(t => t.id === ticketNumber);
+                  const agentMessage = ticket?.messages.find(m => m.from === 'agent');
+                  
+                  if (!ticket) {
+                    return (
+                      <div className="p-8 text-center text-muted-foreground border rounded-lg">
+                        Enter a ticket number to view comparison
+                      </div>
+                    );
+                  }
+
+                  if (!agentMessage) {
+                    return (
+                      <div className="p-8 text-center text-muted-foreground border rounded-lg">
+                        No agent replies found in this ticket
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-base font-semibold">Original Agent Reply</Label>
+                        <div className="mt-2 p-4 rounded-lg bg-muted/30 border min-h-[150px]">
+                          <p className="text-sm whitespace-pre-wrap">{agentMessage.text}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          From {ticket.customer.name} • {new Date(agentMessage.ts).toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="text-base font-semibold">With Brand Tone Applied</Label>
+                        <div className="mt-2 p-4 rounded-lg bg-primary/5 border border-primary/20 min-h-[150px]">
+                          <p className="text-sm whitespace-pre-wrap">
+                            {applyBrandTone(agentMessage.text)}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Using: {brandVoice.archetype} tone • {brandVoice.formality} formality
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </Card>
 
