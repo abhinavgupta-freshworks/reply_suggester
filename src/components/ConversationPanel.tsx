@@ -81,6 +81,13 @@ export const ConversationPanel = () => {
       canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
     };
 
+    // Don't generate if no sources are selected
+    const hasAnySources = availableSources.solution_articles || availableSources.similar_tickets || availableSources.canned_responses;
+    if (!hasAnySources) {
+      setLiveSuggestion('');
+      return;
+    }
+
     const lastCustomerMsg = state.activeTicket.messages
       .filter(m => m.from === 'customer')
       .slice(-1)[0];
@@ -118,6 +125,13 @@ export const ConversationPanel = () => {
       similar_tickets: selectedSources.similar_tickets && state.admin_config.reply_suggester_sources.similar_tickets,
       canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
     };
+
+    // Don't generate if no sources are selected
+    const hasAnySources = availableSources.solution_articles || availableSources.similar_tickets || availableSources.canned_responses;
+    if (!hasAnySources) {
+      setLiveSuggestion('');
+      return;
+    }
 
     const lower = text.toLowerCase();
     let suggestion = '';
@@ -607,23 +621,26 @@ export const ConversationPanel = () => {
           </div>
         )}
 
-        <div className="relative">
-          <Textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => handleDraftChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your reply here..."
-            className="min-h-[100px] resize-none pr-12"
-          />
-          {state.liveSuggestion && (
-            <div className="absolute left-3 top-3 right-12 bottom-3 pointer-events-none overflow-hidden">
-              <span className="text-muted-foreground/40 whitespace-pre-wrap break-words">
-                {draft}
-                <span className="text-muted-foreground/60">{state.liveSuggestion}</span>
-              </span>
-            </div>
-          )}
+        <div className="space-y-2">
+          <label className="text-sm text-muted-foreground">Type your reply here...</label>
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => handleDraftChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder=""
+              className="min-h-[100px] resize-none pr-12"
+            />
+            {state.liveSuggestion && (
+              <div className="absolute left-3 top-3 right-12 bottom-3 pointer-events-none overflow-hidden">
+                <span className="text-muted-foreground/40 whitespace-pre-wrap break-words">
+                  {draft}
+                  <span className="text-muted-foreground/60">{state.liveSuggestion}</span>
+                </span>
+              </div>
+            )}
+          </div>
         </div>
         {state.liveSuggestion && (
           <p className="text-xs text-muted-foreground mt-1">
