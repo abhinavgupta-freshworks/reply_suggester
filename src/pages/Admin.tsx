@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from 'sonner';
+import { Sparkles } from 'lucide-react';
 
 const Admin = () => {
   const { state, updateAdminConfig, addTelemetryEvent } = useAppContext();
@@ -246,6 +247,54 @@ const Admin = () => {
                 className="font-mono text-xs"
               />
               <Button onClick={saveBrandVoice} className="mt-4">Save Archetypes</Button>
+            </Card>
+
+            {/* My Style Configuration */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold">My Style Configuration</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Configure your personal writing style for the "Write in My Style" feature
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const agentReplies = state.tickets
+                      .flatMap(t => t.messages.filter(m => m.from === 'agent').map(m => m.text))
+                      .slice(-5)
+                      .join('\n\n');
+                    setBrandVoice({
+                      ...brandVoice,
+                      my_style_examples: agentReplies || 'No agent replies found yet.'
+                    });
+                    toast.success('Loaded examples from your recent tickets');
+                  }}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Auto-learn from my tickets
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="my_style_examples">Example replies that represent your style</Label>
+                  <Textarea
+                    id="my_style_examples"
+                    value={brandVoice.my_style_examples}
+                    onChange={(e) => setBrandVoice({ ...brandVoice, my_style_examples: e.target.value })}
+                    placeholder="Paste 3-5 example replies that represent your personal writing style..."
+                    rows={6}
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    The AI will analyze these examples to learn your tone, vocabulary, and sentence structure.
+                    Click "Auto-learn" to pull from your recent ticket replies.
+                  </p>
+                </div>
+                <Button onClick={saveBrandVoice}>Save My Style</Button>
+              </div>
             </Card>
 
             {/* Reply Verifier Configuration */}

@@ -78,31 +78,59 @@ export const ConversationPanel = () => {
   };
 
   const handleAIAction = (action: string) => {
-    if (!draft) return;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = draft.substring(start, end);
+    const textToTransform = selectedText || draft;
+
+    if (!textToTransform) {
+      toast.info('Please type some text first');
+      return;
+    }
 
     let result = '';
     const name = state.activeTicket?.customer.name || 'Customer';
+    const myStyleConfig = state.admin_config.brand_voice.my_style_examples || '';
 
     switch (action) {
       case 'Rephrase':
+        result = `${textToTransform.replace(/very/g, 'extremely').replace(/good/g, 'excellent')}`;
+        break;
       case 'More formal':
-        result = `[Simulated AI] More formal: ${draft.replace(/can't/g, 'cannot').replace(/I'm/g, 'I am')}`;
+        result = `${textToTransform.replace(/can't/g, 'cannot').replace(/I'm/g, 'I am').replace(/won't/g, 'will not')}`;
         break;
       case 'Less formal':
-        result = `[Simulated AI] Less formal: ${draft.replace(/I am/g, "I'm").replace(/cannot/g, "can't")}`;
+        result = `${textToTransform.replace(/I am/g, "I'm").replace(/cannot/g, "can't").replace(/will not/g, "won't")}`;
         break;
       case 'Expand':
-        result = `[Simulated AI] Expanded: ${draft} If you need, we can also provide further steps.`;
+        result = `${textToTransform} Additionally, if you need any further assistance with this matter, please don't hesitate to reach out.`;
         break;
       case 'Brand tone':
-        result = `[Simulated AI] Brand (Friendly): Hi ${name} — thanks for reaching out. ${draft}`;
+        const archetype = state.admin_config.brand_voice.archetype || 'Friendly';
+        result = `Hi ${name} — thanks for reaching out. ${textToTransform} [Applied ${archetype} brand tone]`;
         break;
       case 'My style':
-        result = `[Simulated AI] My style applied: ${draft}`;
+        result = `${textToTransform} [Applied your personal writing style${myStyleConfig ? ' from ' + myStyleConfig.split('\n')[0].slice(0, 30) + '...' : ''}]`;
         break;
     }
 
-    setDraft(result);
+    if (selectedText) {
+      // Replace only selected text
+      const newDraft = draft.substring(0, start) + result + draft.substring(end);
+      setDraft(newDraft);
+      // Set cursor position after the replaced text
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + result.length, start + result.length);
+      }, 0);
+    } else {
+      // Replace entire text
+      setDraft(result);
+    }
+
     setLiveSuggestion('');
     addTelemetryEvent({
       event: 'write_with_ai_used',
@@ -110,6 +138,7 @@ export const ConversationPanel = () => {
       ticketId: state.activeTicket?.id,
       agentId: 'agent_1'
     });
+    toast.success(`Applied: ${action}`);
   };
 
   const runVerifier = (): boolean => {
@@ -278,21 +307,31 @@ export const ConversationPanel = () => {
         </div>
       </ScrollArea>
 
-      {/* AI Toolbar */}
-      {state.admin_config.features.write_with_ai && draft && (
-        <div className="border-t border-border p-2 flex flex-wrap gap-1">
-          {['Rephrase', 'More formal', 'Less formal', 'Expand', 'Brand tone', 'My style'].map(action => (
-            <Button
-              key={action}
-              variant="ghost"
-              size="sm"
-              onClick={() => handleAIAction(action)}
-              className="text-xs"
-            >
-              <Sparkles className="h-3 w-3 mr-1" />
-              {action}
-            </Button>
-          ))}
+      {/* AI Toolbar - Write with AI */}
+      {state.admin_config.features.write_with_ai && (
+        <div className="border-t border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Write with AI</span>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {draft ? 'Select text or apply to all' : 'Type to enable'}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {['Rephrase', 'More formal', 'Less formal', 'Expand', 'Brand tone', 'My style'].map(action => (
+              <Button
+                key={action}
+                variant="outline"
+                size="sm"
+                onClick={() => handleAIAction(action)}
+                disabled={!draft}
+                className="text-xs"
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                {action}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
 

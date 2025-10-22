@@ -62,6 +62,8 @@ export interface BrandVoice {
   learning_ticket_ids: string;
   custom_lexicon_text: string;
   response_archetypes_text: string;
+  my_style_examples: string;
+  my_style_enabled: boolean;
 }
 
 export interface VerifierRules {
@@ -217,7 +219,9 @@ const initialState: AppState = {
       learning_urls: 'https://example.com/kb\nhttps://example.com/about',
       learning_ticket_ids: '#1001, #1002',
       custom_lexicon_text: 'workspace (not account)\nteam member (not user)',
-      response_archetypes_text: '## Apology\n1. Acknowledge the issue immediately.\n2. Express genuine empathy.\n3. State the facts (what went wrong).\n4. Provide the fix or next steps.\n\nExample: \'Hi {{name}}, I\'m so sorry to hear you\'re running into [Issue]. That must be frustrating. I\'ve looked into this, and it seems... To fix this, please try...\'\n\n## Escalation\n1. Confirm understanding of the problem.\n2. Apologize for the difficulty.\n3. Explain that you are escalating to a specialist.\n4. Set an expectation for the next reply.\n\nExample: \'Thanks for clarifying, {{name}}. I understand now that [Problem] is happening, and I apologize that we haven\'t been able to solve this yet. I am escalating your ticket to our specialist team who can investigate further. We will get back to you within 24 hours.\''
+      response_archetypes_text: '## Apology\n1. Acknowledge the issue immediately.\n2. Express genuine empathy.\n3. State the facts (what went wrong).\n4. Provide the fix or next steps.\n\nExample: \'Hi {{name}}, I\'m so sorry to hear you\'re running into [Issue]. That must be frustrating. I\'ve looked into this, and it seems... To fix this, please try...\'\n\n## Escalation\n1. Confirm understanding of the problem.\n2. Apologize for the difficulty.\n3. Explain that you are escalating to a specialist.\n4. Set an expectation for the next reply.\n\nExample: \'Thanks for clarifying, {{name}}. I understand now that [Problem] is happening, and I apologize that we haven\'t been able to solve this yet. I am escalating your ticket to our specialist team who can investigate further. We will get back to you within 24 hours.\'',
+      my_style_examples: 'Hi Asha — can you tell me the error?\nThanks for contacting us!',
+      my_style_enabled: true
     },
     verifier_rules: {
       block_inappropriate_language: true,
