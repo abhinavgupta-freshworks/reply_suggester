@@ -61,12 +61,16 @@ export const ConversationPanel = () => {
 
   // Update suggestion when sources change
   useEffect(() => {
-    if (draft && state.admin_config.features.reply_suggester) {
-      generateLiveSuggestion(draft);
-    } else if (!draft && state.activeTicket && state.admin_config.features.reply_suggester) {
-      generateInitialSuggestion();
+    if (state.activeTicket && state.admin_config.features.reply_suggester) {
+      // Clear current suggestion and regenerate
+      setLiveSuggestion('');
+      if (!draft) {
+        generateInitialSuggestion();
+      } else {
+        generateLiveSuggestion(draft);
+      }
     }
-  }, [selectedSources]);
+  }, [selectedSources, draft]);
 
   const generateInitialSuggestion = () => {
     if (!state.activeTicket) return;
@@ -613,8 +617,8 @@ export const ConversationPanel = () => {
             className="min-h-[100px] resize-none pr-12"
           />
           {state.liveSuggestion && (
-            <div className="absolute left-3 top-3 pointer-events-none">
-              <span className="text-muted-foreground/40 whitespace-pre">
+            <div className="absolute left-3 top-3 right-12 bottom-3 pointer-events-none overflow-hidden">
+              <span className="text-muted-foreground/40 whitespace-pre-wrap break-words">
                 {draft}
                 <span className="text-muted-foreground/60">{state.liveSuggestion}</span>
               </span>
