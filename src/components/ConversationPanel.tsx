@@ -52,6 +52,56 @@ export const ConversationPanel = () => {
     }
   }, [state.activeTicket?.messages]);
 
+  // Auto-generate initial suggestion when ticket changes
+  useEffect(() => {
+    if (state.activeTicket && state.admin_config.features.reply_suggester && !draft) {
+      generateInitialSuggestion();
+    }
+  }, [state.activeTicket?.id]);
+
+  // Update suggestion when sources change
+  useEffect(() => {
+    if (draft && state.admin_config.features.reply_suggester) {
+      generateLiveSuggestion(draft);
+    } else if (!draft && state.activeTicket && state.admin_config.features.reply_suggester) {
+      generateInitialSuggestion();
+    }
+  }, [selectedSources]);
+
+  const generateInitialSuggestion = () => {
+    if (!state.activeTicket) return;
+
+    const availableSources = {
+      solution_articles: selectedSources.solution_articles && state.admin_config.reply_suggester_sources.solution_articles,
+      similar_tickets: selectedSources.similar_tickets && state.admin_config.reply_suggester_sources.similar_tickets,
+      canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
+    };
+
+    const lastCustomerMsg = state.activeTicket.messages
+      .filter(m => m.from === 'customer')
+      .slice(-1)[0];
+
+    let suggestion = '';
+
+    if (!lastCustomerMsg) {
+      suggestion = 'Hi, thanks for reaching out. How can I help you today?';
+    } else {
+      const lower = lastCustomerMsg.text.toLowerCase();
+      
+      if (availableSources.solution_articles && (lower.includes('login') || lower.includes('password'))) {
+        suggestion = 'Hi, thanks for contacting us. I can help you with your login issue. Please try resetting your password using the forgot password link.';
+      } else if (availableSources.canned_responses && lower.includes('refund')) {
+        suggestion = 'Hi, I understand you need a refund. I can help you with that. Refunds typically take 5-7 business days to process.';
+      } else if (availableSources.similar_tickets && (lower.includes('shipping') || lower.includes('delivery'))) {
+        suggestion = 'Hi, thanks for reaching out about your delivery. Let me check the status of your shipment for you.';
+      } else {
+        suggestion = `Hi ${state.activeTicket.customer.name}, thanks for contacting us. I'm looking into your issue regarding ${state.activeTicket.subject.toLowerCase()}.`;
+      }
+    }
+
+    setLiveSuggestion(suggestion);
+  };
+
   const generateLiveSuggestion = (text: string) => {
     if (!text || text.endsWith(' ')) {
       setLiveSuggestion('');
@@ -559,7 +609,7 @@ export const ConversationPanel = () => {
             value={draft}
             onChange={(e) => handleDraftChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your reply here... (Try typing 'login' or 'refund' and press Tab)"
+            placeholder="Type your reply here..."
             className="min-h-[100px] resize-none pr-12"
           />
           {state.liveSuggestion && (
