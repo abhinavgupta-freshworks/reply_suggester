@@ -5,9 +5,18 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
-import { Sparkles, Send, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Sparkles, Send, CheckCircle, AlertTriangle, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Checkbox } from './ui/checkbox';
 
 const sentimentEmoji: Record<string, string> = {
   happy: '😀',
@@ -20,6 +29,7 @@ interface VerifierFlag {
   type: string;
   text: string;
   message: string;
+  suggestion?: string;
 }
 
 export const ConversationPanel = () => {
@@ -27,6 +37,12 @@ export const ConversationPanel = () => {
   const [draft, setDraft] = useState('');
   const [verifierFlags, setVerifierFlags] = useState<VerifierFlag[]>([]);
   const [showVerifier, setShowVerifier] = useState(false);
+  const [suggestedFix, setSuggestedFix] = useState('');
+  const [selectedSources, setSelectedSources] = useState({
+    solution_articles: true,
+    similar_tickets: true,
+    canned_responses: true,
+  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -42,14 +58,21 @@ export const ConversationPanel = () => {
       return;
     }
 
+    // Check which sources are available
+    const availableSources = {
+      solution_articles: selectedSources.solution_articles && state.admin_config.reply_suggester_sources.solution_articles,
+      similar_tickets: selectedSources.similar_tickets && state.admin_config.reply_suggester_sources.similar_tickets,
+      canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
+    };
+
     const lower = text.toLowerCase();
     let suggestion = '';
 
-    if (lower.endsWith('login')) {
+    if (availableSources.solution_articles && lower.endsWith('login')) {
       suggestion = ' please try resetting your password.';
-    } else if (lower.endsWith('refund')) {
+    } else if (availableSources.canned_responses && lower.endsWith('refund')) {
       suggestion = ' refunds take 5-7 business days.';
-    } else if (lower.endsWith('hi') || lower.endsWith('hello')) {
+    } else if (availableSources.similar_tickets && (lower.endsWith('hi') || lower.endsWith('hello'))) {
       suggestion = ' thanks for contacting us.';
     } else if (lower.endsWith('thanks')) {
       suggestion = ' you are welcome!';
@@ -141,6 +164,32 @@ export const ConversationPanel = () => {
     toast.success(`Applied: ${action}`);
   };
 
+  const generateSuggestedFix = (flags: VerifierFlag[]): string => {
+    let fixedDraft = draft;
+
+    flags.forEach(flag => {
+      switch (flag.type) {
+        case 'PII':
+          fixedDraft = fixedDraft.replace(/\d{12,}/g, '[REDACTED]');
+          break;
+        case 'INTERNAL_LINK':
+          fixedDraft = fixedDraft.replace(/staging\./g, '').replace(/internal\.example\.com/g, 'example.com');
+          break;
+        case 'REQUIRED_PHRASE':
+          if (!fixedDraft.startsWith(flag.text)) {
+            fixedDraft = `${flag.text}\n\n${fixedDraft}`;
+          }
+          break;
+        case 'REPETITIVE':
+          // Suggest rephrasing
+          fixedDraft = `[Consider rephrasing] ${fixedDraft}`;
+          break;
+      }
+    });
+
+    return fixedDraft;
+  };
+
   const runVerifier = (): boolean => {
     const flags: VerifierFlag[] = [];
 
@@ -148,19 +197,37 @@ export const ConversationPanel = () => {
     if (/\d{12,}/.test(draft)) {
       const match = draft.match(/\d{12,}/);
       if (match) {
-        flags.push({ type: 'PII', text: match[0], message: 'Potential PII detected' });
+        flags.push({
+          type: 'PII',
+          text: match[0],
+          message: `Potential PII detected: "${match[0]}"`,
+          suggestion: 'Remove or redact sensitive information like credit card numbers, SSNs, etc.'
+        });
       }
     }
 
     // Internal links
     if (draft.includes('staging.') || draft.includes('internal.example.com')) {
-      flags.push({ type: 'INTERNAL_LINK', text: 'staging/internal', message: 'Internal link detected' });
+      const links = [];
+      if (draft.includes('staging.')) links.push('staging.*');
+      if (draft.includes('internal.example.com')) links.push('internal.example.com');
+      flags.push({
+        type: 'INTERNAL_LINK',
+        text: links.join(', '),
+        message: `Internal link(s) detected: ${links.join(', ')}`,
+        suggestion: 'Replace with public-facing URLs or remove internal references.'
+      });
     }
 
     // Required phrases
     state.admin_config.verifier_rules.required_phrases.forEach(phrase => {
       if (!draft.includes(phrase)) {
-        flags.push({ type: 'REQUIRED_PHRASE', text: phrase, message: `Required phrase missing: ${phrase}` });
+        flags.push({
+          type: 'REQUIRED_PHRASE',
+          text: phrase,
+          message: `Missing required phrase: "${phrase}"`,
+          suggestion: `Add "${phrase}" to your reply (usually at the beginning).`
+        });
       }
     });
 
@@ -168,9 +235,18 @@ export const ConversationPanel = () => {
     const prevAgentMsgs = state.activeTicket?.messages.filter(m => m.from === 'agent').map(m => m.text) || [];
     prevAgentMsgs.forEach(pm => {
       if (pm && draft.includes(pm)) {
-        flags.push({ type: 'REPETITIVE', text: pm.slice(0, 50), message: 'This solution was already suggested' });
+        flags.push({
+          type: 'REPETITIVE',
+          text: pm.slice(0, 50) + '...',
+          message: 'Repetitive solution: This or similar text was already sent',
+          suggestion: 'Consider rephrasing or providing additional context.'
+        });
       }
     });
+
+    if (flags.length > 0) {
+      setSuggestedFix(generateSuggestedFix(flags));
+    }
 
     setVerifierFlags(flags);
     setShowVerifier(flags.length > 0);
@@ -189,21 +265,24 @@ export const ConversationPanel = () => {
     return flags.length === 0;
   };
 
-  const handleSend = () => {
-    if (!draft.trim() || !state.activeTicket) return;
+  const handleSendAnyway = () => {
+    setShowVerifier(false);
+    proceedWithSend(draft);
+  };
 
-    if (state.admin_config.features.reply_verifier) {
-      const canSend = runVerifier();
-      if (!canSend) {
-        toast.error('Verifier found issues. Please review before sending.');
-        return;
-      }
-    }
+  const handleApplyFix = () => {
+    setDraft(suggestedFix);
+    setShowVerifier(false);
+    toast.success('Applied suggested fixes');
+  };
+
+  const proceedWithSend = (text: string) => {
+    if (!text.trim() || !state.activeTicket) return;
 
     const message = {
       id: `m${Date.now()}`,
       from: 'agent' as const,
-      text: draft,
+      text: text,
       ts: new Date().toISOString(),
       sentiment: 'neutral' as const,
       language: 'en'
@@ -213,7 +292,7 @@ export const ConversationPanel = () => {
     addTelemetryEvent({
       event: 'reply_sent',
       ticketId: state.activeTicket.id,
-      textPreview: draft.slice(0, 80),
+      textPreview: text.slice(0, 80),
       agentId: 'agent_1'
     });
 
@@ -222,6 +301,19 @@ export const ConversationPanel = () => {
     setShowVerifier(false);
     setVerifierFlags([]);
     toast.success('Reply sent');
+  };
+
+  const handleSend = () => {
+    if (!draft.trim() || !state.activeTicket) return;
+
+    if (state.admin_config.features.reply_verifier) {
+      const canSend = runVerifier();
+      if (!canSend) {
+        return; // Modal will show, user can choose to send anyway or fix
+      }
+    }
+
+    proceedWithSend(draft);
   };
 
   const handleSummarize = () => {
@@ -335,30 +427,132 @@ export const ConversationPanel = () => {
         </div>
       )}
 
-      {/* Verifier Flags */}
-      {showVerifier && verifierFlags.length > 0 && (
-        <div className="border-t border-warning/30 bg-warning/5 p-3">
-          <div className="flex items-start gap-2 mb-2">
-            <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">Verifier Flags</p>
-              <div className="space-y-1 mt-1">
-                {verifierFlags.map((flag, i) => (
-                  <p key={i} className="text-xs text-muted-foreground">
-                    <span className="font-medium">{flag.type}:</span> {flag.message}
-                  </p>
-                ))}
+      {/* Verifier Dialog */}
+      <AlertDialog open={showVerifier} onOpenChange={setShowVerifier}>
+        <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Reply Verification Issues
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The verifier found {verifierFlags.length} issue{verifierFlags.length !== 1 ? 's' : ''} with your reply. Review the details below.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 my-4">
+            {/* Issues List */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold">Issues Found:</h4>
+              {verifierFlags.map((flag, i) => (
+                <div key={i} className="border border-warning/30 rounded-lg p-3 bg-warning/5">
+                  <div className="flex items-start gap-2">
+                    <Badge variant="outline" className="mt-0.5 border-warning text-warning">
+                      {flag.type}
+                    </Badge>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium">{flag.message}</p>
+                      {flag.text && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">Found:</span> "{flag.text}"
+                        </p>
+                      )}
+                      {flag.suggestion && (
+                        <p className="text-xs text-primary">
+                          <span className="font-medium">Suggestion:</span> {flag.suggestion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Suggested Fix */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold">Suggested Corrected Reply:</h4>
+              <div className="bg-muted rounded-lg p-3 border border-border">
+                <p className="text-sm whitespace-pre-wrap">{suggestedFix}</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setShowVerifier(false)}>
-              Dismiss
-            </Button>
+
+            {/* Original for comparison */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-muted-foreground">Your Original Reply:</h4>
+              <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">{draft}</p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={handleSendAnyway}>
+              Send Anyway
+            </Button>
+            <Button onClick={handleApplyFix}>
+              Apply Fix & Continue Editing
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reply Editor */}
       <div className="border-t border-border p-4">
+        {/* Source Filter */}
+        {state.admin_config.features.reply_suggester && (
+          <div className="mb-3 p-3 bg-muted/30 rounded-lg border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <Filter className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Reply Suggester Sources</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { key: 'solution_articles', label: 'Solution Articles' },
+                { key: 'similar_tickets', label: 'Similar Tickets' },
+                { key: 'canned_responses', label: 'Canned Responses' },
+              ].map(source => {
+                const adminEnabled = state.admin_config.reply_suggester_sources[source.key as keyof typeof state.admin_config.reply_suggester_sources];
+                const isDisabled = !adminEnabled;
+                
+                return (
+                  <div
+                    key={source.key}
+                    className={cn(
+                      "flex items-center gap-2",
+                      isDisabled && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <Checkbox
+                      id={source.key}
+                      checked={selectedSources[source.key as keyof typeof selectedSources]}
+                      disabled={isDisabled}
+                      onCheckedChange={(checked) => {
+                        if (!isDisabled) {
+                          setSelectedSources(prev => ({
+                            ...prev,
+                            [source.key]: checked as boolean
+                          }));
+                          toast.info(`${source.label} ${checked ? 'enabled' : 'disabled'}`);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={source.key}
+                      className={cn(
+                        "text-xs font-medium cursor-pointer",
+                        isDisabled && "cursor-not-allowed"
+                      )}
+                    >
+                      {source.label}
+                      {isDisabled && <span className="text-muted-foreground ml-1">(Admin disabled)</span>}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="relative">
           <Textarea
             ref={textareaRef}
