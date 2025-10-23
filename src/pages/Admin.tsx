@@ -152,18 +152,20 @@ const Admin = () => {
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">Reply Suggester Settings</h2>
               <div className="space-y-4">
-                {Object.entries(state.admin_config.reply_suggester_sources).map(([key, value]) => (
-                  <div key={key} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`source-${key}`}
-                      checked={value}
-                      onCheckedChange={() => toggleSource(key)}
-                    />
-                    <Label htmlFor={`source-${key}`} className="capitalize cursor-pointer">
-                      {key.replace(/_/g, ' ')}
-                    </Label>
-                  </div>
-                ))}
+                {Object.entries(state.admin_config.reply_suggester_sources)
+                  .filter(([key]) => key !== 'tickets')
+                  .map(([key, value]) => (
+                    <div key={key} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`source-${key}`}
+                        checked={value}
+                        onCheckedChange={() => toggleSource(key)}
+                      />
+                      <Label htmlFor={`source-${key}`} className="capitalize cursor-pointer">
+                        {key.replace(/_/g, ' ')}
+                      </Label>
+                    </div>
+                  ))}
               </div>
               <p className="text-sm text-muted-foreground mt-4">
                 Disabled sources will be greyed out in the Agent's source filter.
