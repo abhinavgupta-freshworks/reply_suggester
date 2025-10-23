@@ -68,9 +68,15 @@ export const ConversationPanel = () => {
         generateInitialSuggestion();
       } else {
         generateLiveSuggestion(draft);
+        // Track suggestion regeneration when sources change
+        addTelemetryEvent({
+          event: 'reply_suggester_generated',
+          ticketId: state.activeTicket.id,
+          agentId: 'agent_1'
+        });
       }
     }
-  }, [selectedSources, draft]);
+  }, [selectedSources]);
 
   const generateInitialSuggestion = () => {
     if (!state.activeTicket) return;
@@ -111,6 +117,13 @@ export const ConversationPanel = () => {
     }
 
     setLiveSuggestion(suggestion);
+    
+    // Track suggestion generation
+    addTelemetryEvent({
+      event: 'reply_suggester_generated',
+      ticketId: state.activeTicket.id,
+      agentId: 'agent_1'
+    });
   };
 
   const generateLiveSuggestion = (text: string) => {
