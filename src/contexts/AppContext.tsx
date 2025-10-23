@@ -193,10 +193,7 @@ const initialState: AppState = {
     { id: 'agent_2', name: 'Rahul' }
   ],
   telemetry: {
-    events: [
-      { event: 'reply_suggester_generated', ticketId: 'T-1001', sourcesUsed: ['solution_articles', 'canned_responses'], ts: '2025-10-20T09:10:00Z' },
-      { event: 'write_with_ai_used', action: 'rephrase', ticketId: 'T-1001', agentId: 'agent_1', ts: '2025-10-20T09:11:00Z' }
-    ]
+    events: []
   },
   admin_config: {
     features: {

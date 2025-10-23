@@ -43,6 +43,7 @@ export const ConversationPanel = () => {
     similar_tickets: true,
     canned_responses: true,
   });
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -55,26 +56,31 @@ export const ConversationPanel = () => {
   // Auto-generate initial suggestion when ticket changes
   useEffect(() => {
     if (state.activeTicket && state.admin_config.features.reply_suggester && !draft) {
+      setIsInitialLoad(true);
       generateInitialSuggestion();
     }
   }, [state.activeTicket?.id]);
 
   // Update suggestion when sources change
   useEffect(() => {
-    if (state.activeTicket && state.admin_config.features.reply_suggester) {
+    if (state.activeTicket && state.admin_config.features.reply_suggester && !isInitialLoad) {
       // Clear current suggestion and regenerate
       setLiveSuggestion('');
       if (!draft) {
         generateInitialSuggestion();
       } else {
         generateLiveSuggestion(draft);
-        // Track suggestion regeneration when sources change
-        addTelemetryEvent({
-          event: 'reply_suggester_generated',
-          ticketId: state.activeTicket.id,
-          agentId: 'agent_1'
-        });
       }
+      // Track suggestion regeneration only when user manually changes sources
+      addTelemetryEvent({
+        event: 'reply_suggester_generated',
+        ticketId: state.activeTicket.id,
+        agentId: 'agent_1'
+      });
+    }
+    // Mark that initial load is complete
+    if (isInitialLoad) {
+      setIsInitialLoad(false);
     }
   }, [selectedSources]);
 
