@@ -184,7 +184,6 @@ export const ConversationPanel = () => {
 
     let result = '';
     const name = state.activeTicket?.customer.name || 'Customer';
-    const myStyleConfig = state.admin_config.brand_voice.my_style_examples || '';
 
     switch (action) {
       case 'Rephrase':
@@ -204,7 +203,7 @@ export const ConversationPanel = () => {
         result = `Hi ${name} — thanks for reaching out. ${textToTransform} [Applied ${archetype} brand tone]`;
         break;
       case 'My style':
-        result = `${textToTransform} [Applied your personal writing style${myStyleConfig ? ' from ' + myStyleConfig.split('\n')[0].slice(0, 30) + '...' : ''}]`;
+        result = `${textToTransform} [Applied your personal writing style]`;
         break;
     }
 

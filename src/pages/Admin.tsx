@@ -17,7 +17,7 @@ import { Sparkles, TestTube, ArrowRight, X, Pencil } from 'lucide-react';
 const Admin = () => {
   const { state, updateAdminConfig, addTelemetryEvent } = useAppContext();
   const [brandVoice, setBrandVoice] = useState(state.admin_config.brand_voice);
-  const [previewText, setPreviewText] = useState('Hi, I understand you are having issues with your account. Let me check this for you.');
+  const [previewText, setPreviewText] = useState('');
   const [ticketNumber, setTicketNumber] = useState('T-1001');
   const [editingDoIndex, setEditingDoIndex] = useState<number | null>(null);
   const [editingDontIndex, setEditingDontIndex] = useState<number | null>(null);
@@ -502,18 +502,45 @@ const Admin = () => {
                     )}
                   </div>
                   
-                  <div>
-                    <Label htmlFor="my_style_examples">Manual Style Examples</Label>
-                    <Textarea
-                      id="my_style_examples"
-                      value={brandVoice.my_style_examples}
-                      onChange={(e) => setBrandVoice({ ...brandVoice, my_style_examples: e.target.value })}
-                      placeholder="Paste 3-5 example replies that represent your personal writing style..."
-                      rows={6}
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      The AI will analyze these examples to learn tone, vocabulary, and sentence structure.
+                  <div className="space-y-4">
+                    <Label className="text-base font-medium">Test Your Style</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Test how your brand voice configuration transforms inputs
                     </p>
+                    <div>
+                      <Label htmlFor="style_test_input" className="text-sm">Input</Label>
+                      <Textarea
+                        id="style_test_input"
+                        value={brandVoice.style_test_input}
+                        onChange={(e) => setBrandVoice({ ...brandVoice, style_test_input: e.target.value })}
+                        placeholder="Enter a message to see how it would be reworded..."
+                        rows={4}
+                        className="mt-2"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => {
+                        // Simulate AI processing with brand voice
+                        setBrandVoice({
+                          ...brandVoice,
+                          style_test_output: applyBrandTone(brandVoice.style_test_input)
+                        });
+                      }}
+                      className="w-full"
+                    >
+                      Generate Output
+                    </Button>
+                    <div>
+                      <Label htmlFor="style_test_output" className="text-sm">Output</Label>
+                      <Textarea
+                        id="style_test_output"
+                        value={brandVoice.style_test_output}
+                        readOnly
+                        placeholder="Output will appear here..."
+                        rows={4}
+                        className="mt-2 bg-muted/50"
+                      />
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -540,27 +567,32 @@ const Admin = () => {
 
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="preview_text">Input Text</Label>
+                  <Label htmlFor="preview_text">Input</Label>
                   <Textarea
                     id="preview_text"
                     value={previewText}
                     onChange={(e) => setPreviewText(e.target.value)}
                     rows={3}
                     placeholder="Type or paste text to see how it will be transformed..."
+                    className="mt-2"
                   />
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-1 bg-border" />
-                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                  <div className="h-px flex-1 bg-border" />
-                </div>
+                <Button
+                  onClick={() => {
+                    // Trigger the brand tone transformation
+                    setPreviewText(previewText);
+                  }}
+                  className="w-full"
+                >
+                  Generate Response
+                </Button>
 
                 <div>
-                  <Label>Output with Brand Tone</Label>
+                  <Label>Output</Label>
                   <div className="mt-2 p-4 rounded-lg bg-muted/50 border min-h-[100px]">
                     <p className="text-sm whitespace-pre-wrap">
-                      {applyBrandTone(previewText)}
+                      {previewText ? applyBrandTone(previewText) : 'Output will appear here...'}
                     </p>
                   </div>
                 </div>
