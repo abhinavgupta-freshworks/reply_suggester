@@ -64,6 +64,10 @@ export interface BrandVoice {
   response_archetypes_text: string;
   my_style_examples: string;
   my_style_enabled: boolean;
+  auto_learn_enabled: boolean;
+  selected_agent_id: string;
+  guidelines_dos: string[];
+  guidelines_donts: string[];
 }
 
 export interface VerifierRules {
@@ -90,6 +94,7 @@ export interface AdminConfig {
     solution_articles: boolean;
     similar_tickets: boolean;
     canned_responses: boolean;
+    tickets: boolean;
   };
   brand_voice: BrandVoice;
   verifier_rules: VerifierRules;
@@ -204,7 +209,8 @@ const initialState: AppState = {
     reply_suggester_sources: {
       solution_articles: true,
       similar_tickets: true,
-      canned_responses: true
+      canned_responses: true,
+      tickets: true
     },
     brand_voice: {
       enabled: true,
@@ -219,9 +225,13 @@ const initialState: AppState = {
       learning_urls: 'https://example.com/kb\nhttps://example.com/about',
       learning_ticket_ids: '#1001, #1002',
       custom_lexicon_text: 'workspace (not account)\nteam member (not user)',
-      response_archetypes_text: '## Apology\n1. Acknowledge the issue immediately.\n2. Express genuine empathy.\n3. State the facts (what went wrong).\n4. Provide the fix or next steps.\n\nExample: \'Hi {{name}}, I\'m so sorry to hear you\'re running into [Issue]. That must be frustrating. I\'ve looked into this, and it seems... To fix this, please try...\'\n\n## Escalation\n1. Confirm understanding of the problem.\n2. Apologize for the difficulty.\n3. Explain that you are escalating to a specialist.\n4. Set an expectation for the next reply.\n\nExample: \'Thanks for clarifying, {{name}}. I understand now that [Problem] is happening, and I apologize that we haven\'t been able to solve this yet. I am escalating your ticket to our specialist team who can investigate further. We will get back to you within 24 hours.\'',
+      response_archetypes_text: '## Apology\nDefinition: Use when the company made an error, service failed, or customer experienced an inconvenience caused by us.\n\nStructure:\n1. Acknowledge the specific issue immediately\n2. Express genuine empathy for their experience\n3. Take ownership and explain what went wrong\n4. Provide the solution or clear next steps\n5. Offer to help further if needed\n\nExample: "Hi Sarah, I sincerely apologize for the delay in processing your refund. I completely understand how frustrating this must be, especially after you\'ve been waiting for over a week. I\'ve looked into your account and can see that our payment system had a technical glitch that affected several transactions. I\'ve personally expedited your refund, and you should see it in your account within 24 hours. If you don\'t see it by tomorrow, please reach out to me directly and I\'ll follow up immediately."\n\n## Escalation\nDefinition: Use when the issue is beyond your scope, requires specialist knowledge, or previous attempts to resolve have failed.\n\nStructure:\n1. Acknowledge you understand the full scope of their issue\n2. Validate that this requires specialized attention\n3. Explain who will handle it and why they\'re better equipped\n4. Set clear expectations for timeline and next contact\n5. Assure them you\'re tracking it personally\n\nExample: "Thanks for providing those additional details, James. I now have a complete understanding of the integration issue you\'re facing with our API. This is definitely more complex than a standard setup, and I want to make sure you get the most accurate solution. I\'m escalating your case to our senior technical team who specialize in custom integrations. They have much deeper expertise in this area and will be able to provide you with the exact configuration you need. You can expect a detailed response from them within 24 hours. I\'ve flagged this as high priority and will personally monitor the progress to ensure it\'s resolved quickly."',
       my_style_examples: 'Hi Asha — can you tell me the error?\nThanks for contacting us!',
-      my_style_enabled: true
+      my_style_enabled: true,
+      auto_learn_enabled: false,
+      selected_agent_id: 'agent_1',
+      guidelines_dos: ['Always be courteous and keep the customer first.'],
+      guidelines_donts: []
     },
     verifier_rules: {
       block_inappropriate_language: true,

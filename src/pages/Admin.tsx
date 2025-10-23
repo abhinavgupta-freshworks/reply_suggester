@@ -12,13 +12,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-import { Sparkles, TestTube, ArrowRight } from 'lucide-react';
+import { Sparkles, TestTube, ArrowRight, X, Pencil } from 'lucide-react';
 
 const Admin = () => {
   const { state, updateAdminConfig, addTelemetryEvent } = useAppContext();
   const [brandVoice, setBrandVoice] = useState(state.admin_config.brand_voice);
   const [previewText, setPreviewText] = useState('Hi, I understand you are having issues with your account. Let me check this for you.');
   const [ticketNumber, setTicketNumber] = useState('T-1001');
+  const [editingDoIndex, setEditingDoIndex] = useState<number | null>(null);
+  const [editingDontIndex, setEditingDontIndex] = useState<number | null>(null);
 
   const toggleFeature = (key: string) => {
     const newFeatures = {
@@ -180,8 +182,8 @@ const Admin = () => {
               <Tabs defaultValue="basics" className="w-full">
                 <TabsList className="grid w-full grid-cols-4 mb-6">
                   <TabsTrigger value="basics">Basics</TabsTrigger>
-                  <TabsTrigger value="learning">Learning Sources</TabsTrigger>
                   <TabsTrigger value="archetypes">Response Patterns</TabsTrigger>
+                  <TabsTrigger value="learning">Learning Sources</TabsTrigger>
                   <TabsTrigger value="mystyle">My Style</TabsTrigger>
                 </TabsList>
 
@@ -229,15 +231,136 @@ const Admin = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="sample_rules">Brand Communication Guidelines</Label>
-                    <Textarea
-                      id="sample_rules"
-                      value={brandVoice.sample_rules}
-                      onChange={(e) => setBrandVoice({ ...brandVoice, sample_rules: e.target.value })}
-                      placeholder="e.g., We use a friendly, professional tone..."
-                      rows={4}
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold mb-3">Brand Voice & Reply Guidelines</h3>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-base">Dos</Label>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setBrandVoice({
+                                  ...brandVoice,
+                                  guidelines_dos: [...brandVoice.guidelines_dos, 'New guideline...']
+                                });
+                              }}
+                            >
+                              + Add a Do
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {brandVoice.guidelines_dos.map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-2 p-2 border rounded-md bg-background">
+                                {editingDoIndex === idx ? (
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const newDos = [...brandVoice.guidelines_dos];
+                                      newDos[idx] = e.target.value;
+                                      setBrandVoice({ ...brandVoice, guidelines_dos: newDos });
+                                    }}
+                                    onBlur={() => setEditingDoIndex(null)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') setEditingDoIndex(null);
+                                    }}
+                                    autoFocus
+                                    className="flex-1"
+                                  />
+                                ) : (
+                                  <span className="flex-1 text-sm">{item}</span>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setEditingDoIndex(idx)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    const newDos = brandVoice.guidelines_dos.filter((_, i) => i !== idx);
+                                    setBrandVoice({ ...brandVoice, guidelines_dos: newDos });
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="h-px bg-border" />
+
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-base">Don'ts</Label>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setBrandVoice({
+                                  ...brandVoice,
+                                  guidelines_donts: [...brandVoice.guidelines_donts, 'New guideline...']
+                                });
+                              }}
+                            >
+                              + Add a Don't
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {brandVoice.guidelines_donts.map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-2 p-2 border rounded-md bg-background">
+                                {editingDontIndex === idx ? (
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const newDonts = [...brandVoice.guidelines_donts];
+                                      newDonts[idx] = e.target.value;
+                                      setBrandVoice({ ...brandVoice, guidelines_donts: newDonts });
+                                    }}
+                                    onBlur={() => setEditingDontIndex(null)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') setEditingDontIndex(null);
+                                    }}
+                                    autoFocus
+                                    className="flex-1"
+                                  />
+                                ) : (
+                                  <span className="flex-1 text-sm">{item}</span>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setEditingDontIndex(idx)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    const newDonts = brandVoice.guidelines_donts.filter((_, i) => i !== idx);
+                                    setBrandVoice({ ...brandVoice, guidelines_donts: newDonts });
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="formality">Formality Level</Label>
@@ -257,6 +380,19 @@ const Admin = () => {
                   </div>
                 </TabsContent>
 
+                <TabsContent value="archetypes" className="space-y-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Define response patterns for different situations. Include a definition for each situation so the AI can determine when to apply each pattern, followed by the structure and a detailed example.
+                  </p>
+                  <Textarea
+                    value={brandVoice.response_archetypes_text}
+                    onChange={(e) => setBrandVoice({ ...brandVoice, response_archetypes_text: e.target.value })}
+                    rows={16}
+                    className="font-mono text-xs"
+                    placeholder="## Apology&#10;Definition: Use when the company made an error or service failed&#10;&#10;Structure:&#10;1. Acknowledge the issue&#10;2. Express empathy&#10;3. Provide solution&#10;&#10;Example: Full example following the structure..."
+                  />
+                </TabsContent>
+
                 <TabsContent value="learning" className="space-y-4">
                   <div>
                     <Label htmlFor="example_replies">Example Replies (Paste 3-5)</Label>
@@ -267,6 +403,19 @@ const Admin = () => {
                       rows={4}
                       placeholder="Paste example replies that represent your brand voice..."
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="learning_ticket_ids">Tickets (Ticket IDs to learn from)</Label>
+                    <Textarea
+                      id="learning_ticket_ids"
+                      value={brandVoice.learning_ticket_ids}
+                      onChange={(e) => setBrandVoice({ ...brandVoice, learning_ticket_ids: e.target.value })}
+                      rows={2}
+                      placeholder="#1001, #1002, #1003"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      AI will automatically learn from agent replies in these tickets
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="learning_urls">Website & KB URLs (One per line)</Label>
@@ -293,49 +442,68 @@ const Admin = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="archetypes" className="space-y-4">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Define response patterns for different situations. Use headings for each pattern.
-                  </p>
-                  <Textarea
-                    value={brandVoice.response_archetypes_text}
-                    onChange={(e) => setBrandVoice({ ...brandVoice, response_archetypes_text: e.target.value })}
-                    rows={10}
-                    className="font-mono text-xs"
-                    placeholder="## Apology&#10;1. Acknowledge the issue&#10;2. Express empathy&#10;Example: ..."
-                  />
-                </TabsContent>
-
                 <TabsContent value="mystyle" className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="font-semibold">Personal Writing Style</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Configure your personal style for "Write in My Style" feature
-                      </p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h3 className="font-semibold">Auto-learn from Tickets</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically learn writing style from agent ticket responses
+                        </p>
+                      </div>
+                      <Switch
+                        checked={brandVoice.auto_learn_enabled}
+                        onCheckedChange={(checked) => 
+                          setBrandVoice({ ...brandVoice, auto_learn_enabled: checked })
+                        }
+                      />
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const agentReplies = state.tickets
-                          .flatMap(t => t.messages.filter(m => m.from === 'agent').map(m => m.text))
-                          .slice(-5)
-                          .join('\n\n');
-                        setBrandVoice({
-                          ...brandVoice,
-                          my_style_examples: agentReplies || 'No agent replies found yet.'
-                        });
-                        toast.success('Loaded examples from your recent tickets');
-                      }}
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Auto-learn from my tickets
-                    </Button>
+
+                    {brandVoice.auto_learn_enabled && (
+                      <div>
+                        <Label htmlFor="selected_agent">Select Agent to Learn From</Label>
+                        <Select
+                          value={brandVoice.selected_agent_id}
+                          onValueChange={(v) => setBrandVoice({ ...brandVoice, selected_agent_id: v })}
+                        >
+                          <SelectTrigger id="selected_agent">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {state.agents.map(agent => (
+                              <SelectItem key={agent.id} value={agent.id}>
+                                {agent.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          The AI will learn from this agent's ticket responses to understand their writing style
+                        </p>
+                        
+                        <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                          <h4 className="text-sm font-medium mb-2">Learning Preview</h4>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Based on {state.agents.find(a => a.id === brandVoice.selected_agent_id)?.name}'s recent responses:
+                          </p>
+                          <div className="space-y-2">
+                            {state.tickets
+                              .flatMap(t => t.messages.filter(m => m.from === 'agent'))
+                              .slice(-3)
+                              .map((msg, idx) => (
+                                <div key={idx} className="text-xs p-2 bg-background rounded border">
+                                  {msg.text}
+                                </div>
+                              ))
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <div>
-                    <Label htmlFor="my_style_examples">Example replies that represent your style</Label>
+                    <Label htmlFor="my_style_examples">Manual Style Examples</Label>
                     <Textarea
                       id="my_style_examples"
                       value={brandVoice.my_style_examples}
@@ -344,7 +512,7 @@ const Admin = () => {
                       rows={6}
                     />
                     <p className="text-xs text-muted-foreground mt-2">
-                      The AI will analyze these examples to learn your tone, vocabulary, and sentence structure.
+                      The AI will analyze these examples to learn tone, vocabulary, and sentence structure.
                     </p>
                   </div>
                 </TabsContent>
