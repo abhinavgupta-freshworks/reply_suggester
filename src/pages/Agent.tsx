@@ -25,7 +25,7 @@ const Agent = () => {
             <Button
               variant="outline"
               size="icon"
-              className="absolute top-4 right-4 h-8 w-8"
+              className="fixed top-1/2 right-2 -translate-y-1/2 h-8 w-8 z-50 shadow"
               onClick={() => setContextPanelVisible(true)}
               title="Show Context Panel"
             >
@@ -36,15 +36,6 @@ const Agent = () => {
         {state.contextPanelVisible && (
           <div className="relative">
             <ContextPanel />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 h-6 w-6 opacity-60 hover:opacity-100"
-              onClick={() => setContextPanelVisible(false)}
-              title="Hide Context Panel"
-            >
-              <ChevronRight className="h-3 w-3" />
-            </Button>
           </div>
         )}
       </div>

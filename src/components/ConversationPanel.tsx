@@ -72,25 +72,24 @@ export const ConversationPanel = () => {
 
   // Update suggestion when sources change
   useEffect(() => {
-    if (state.activeTicket && state.admin_config.features.reply_suggester && !isInitialLoad) {
-      // Clear current suggestion and regenerate
-      setLiveSuggestion('');
-      if (!draft) {
-        generateInitialSuggestion();
-      } else {
-        generateLiveSuggestion(draft);
-      }
-      // Track suggestion regeneration only when user manually changes sources
-      addTelemetryEvent({
-        event: 'reply_suggester_generated',
-        ticketId: state.activeTicket.id,
-        agentId: 'agent_1'
-      });
+    if (!state.activeTicket || !state.admin_config.features.reply_suggester) return;
+
+    // Clear current suggestion and regenerate based on selection and current draft
+    setLiveSuggestion('');
+    const hasDraft = !!draft.trim();
+    if (!hasDraft) {
+      generateInitialSuggestion();
+    } else {
+      generateLiveSuggestion(draft);
     }
-    // Mark that initial load is complete
-    if (isInitialLoad) {
-      setIsInitialLoad(false);
-    }
+
+    // Track regeneration on source toggle
+    addTelemetryEvent({
+      event: 'reply_suggester_sources_changed',
+      ticketId: state.activeTicket.id,
+      agentId: 'agent_1',
+      sources: selectedSources,
+    });
   }, [selectedSources]);
 
   const generateInitialSuggestion = () => {
@@ -220,17 +219,28 @@ export const ConversationPanel = () => {
         newText = selectedText || 'italic text';
         break;
       case 'underline':
-        before = '<u>';
-        after = '</u>';
-        newText = selectedText || 'underlined text';
+        // Markdown doesn't natively support underline; we will simulate with double underscores
+        before = '__';
+        after = '__';
+        newText = selectedText || 'underlined';
         break;
       case 'bulletList':
-        before = '\n- ';
-        newText = selectedText || 'list item';
+        before = selectedText ? '' : '\n- ';
+        newText = selectedText
+          ? selectedText
+              .split('\n')
+              .map((l) => (l.trim().length ? `- ${l}` : l))
+              .join('\n')
+          : 'list item';
         break;
       case 'numberedList':
-        before = '\n1. ';
-        newText = selectedText || 'list item';
+        before = selectedText ? '' : '\n1. ';
+        newText = selectedText
+          ? selectedText
+              .split('\n')
+              .map((l, i) => (l.trim().length ? `${i + 1}. ${l}` : l))
+              .join('\n')
+          : 'list item';
         break;
       case 'link':
         before = '[';
@@ -244,13 +254,13 @@ export const ConversationPanel = () => {
         break;
     }
 
-    const replacement = before + newText + after;
+    const replacement = before + newText + (after || '');
     const newDraft = draft.substring(0, start) + replacement + draft.substring(end);
     setDraft(newDraft);
     
     setTimeout(() => {
       textarea.focus();
-      const cursorPos = start + before.length + newText.length;
+      const cursorPos = start + (before ? before.length : 0) + newText.length;
       textarea.setSelectionRange(cursorPos, cursorPos);
     }, 0);
   };
@@ -634,7 +644,7 @@ export const ConversationPanel = () => {
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="start" className="z-50 bg-popover">
                 {['Rephrase', 'More formal', 'Less formal', 'Expand', 'Brand tone', 'My style'].map(action => (
                   <DropdownMenuItem
                     key={action}
@@ -661,7 +671,7 @@ export const ConversationPanel = () => {
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="start" className="z-50 bg-popover">
                 {[
                   { key: 'solution_articles', label: 'Solution Articles' },
                   { key: 'similar_tickets', label: 'Similar Tickets' },

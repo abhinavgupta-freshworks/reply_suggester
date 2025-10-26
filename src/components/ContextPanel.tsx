@@ -21,7 +21,7 @@ const sentimentEmoji: Record<string, string> = {
 };
 
 export const ContextPanel = () => {
-  const { state } = useAppContext();
+  const { state, setContextPanelVisible } = useAppContext();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   if (!state.activeTicket) {
@@ -106,7 +106,18 @@ export const ContextPanel = () => {
 
   return (
     <Card className="flex h-full min-h-0 flex-col p-4">
-      <h2 className="text-lg font-semibold mb-4">Context & KB</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Context & KB</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => setContextPanelVisible(false)}
+          title="Hide Context Panel"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
 
       <ScrollArea className="flex-1">
         <div className="space-y-3">
