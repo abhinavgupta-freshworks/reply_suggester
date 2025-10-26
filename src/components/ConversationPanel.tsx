@@ -4,8 +4,10 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
-import { ScrollArea } from './ui/scroll-area';
-import { Sparkles, Send, CheckCircle, AlertTriangle, Filter } from 'lucide-react';
+import { 
+  Sparkles, Send, CheckCircle, AlertTriangle, ChevronDown, 
+  Bold, Italic, Underline, List, ListOrdered, Link2, Code 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -16,7 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Checkbox } from './ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 const sentimentEmoji: Record<string, string> = {
   happy: '😀',
@@ -185,6 +194,65 @@ export const ConversationPanel = () => {
         ticketId: state.activeTicket?.id
       });
     }
+  };
+
+  const insertFormatting = (format: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = draft.substring(start, end);
+    
+    let before = '';
+    let after = '';
+    let newText = '';
+
+    switch (format) {
+      case 'bold':
+        before = '**';
+        after = '**';
+        newText = selectedText || 'bold text';
+        break;
+      case 'italic':
+        before = '_';
+        after = '_';
+        newText = selectedText || 'italic text';
+        break;
+      case 'underline':
+        before = '<u>';
+        after = '</u>';
+        newText = selectedText || 'underlined text';
+        break;
+      case 'bulletList':
+        before = '\n- ';
+        newText = selectedText || 'list item';
+        break;
+      case 'numberedList':
+        before = '\n1. ';
+        newText = selectedText || 'list item';
+        break;
+      case 'link':
+        before = '[';
+        after = '](url)';
+        newText = selectedText || 'link text';
+        break;
+      case 'code':
+        before = '`';
+        after = '`';
+        newText = selectedText || 'code';
+        break;
+    }
+
+    const replacement = before + newText + after;
+    const newDraft = draft.substring(0, start) + replacement + draft.substring(end);
+    setDraft(newDraft);
+    
+    setTimeout(() => {
+      textarea.focus();
+      const cursorPos = start + before.length + newText.length;
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    }, 0);
   };
 
   const handleAIAction = (action: string) => {
@@ -485,35 +553,200 @@ export const ConversationPanel = () => {
         </div>
       </div>
 
-      {/* AI Toolbar - Write with AI */}
-      {state.admin_config.features.write_with_ai && (
-        <div className="border-t border-border bg-muted/30 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Write with AI</span>
-            <span className="text-xs text-muted-foreground ml-auto">
-              {draft ? 'Select text or apply to all' : 'Type to enable'}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {['Rephrase', 'More formal', 'Less formal', 'Expand', 'Brand tone', 'My style'].map(action => (
-              <Button
-                key={action}
-                variant="outline"
-                size="sm"
-                onClick={() => handleAIAction(action)}
-                disabled={!draft}
-                className="text-xs"
-              >
-                <Sparkles className="h-3 w-3 mr-1" />
-                {action}
-              </Button>
-            ))}
+      {/* AI Toolbar & Reply Editor - Compact */}
+      <div className="border-t border-border p-4">
+        {/* Formatting & AI Toolbar */}
+        <div className="flex items-center gap-1 mb-3 pb-3 border-b border-border">
+          {/* Text Formatting Buttons */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => insertFormatting('bold')}
+            className="h-8 w-8 p-0"
+            title="Bold"
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => insertFormatting('italic')}
+            className="h-8 w-8 p-0"
+            title="Italic"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => insertFormatting('underline')}
+            className="h-8 w-8 p-0"
+            title="Underline"
+          >
+            <Underline className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => insertFormatting('bulletList')}
+            className="h-8 w-8 p-0"
+            title="Bullet List"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => insertFormatting('numberedList')}
+            className="h-8 w-8 p-0"
+            title="Numbered List"
+          >
+            <ListOrdered className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => insertFormatting('link')}
+            className="h-8 w-8 p-0"
+            title="Link"
+          >
+            <Link2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => insertFormatting('code')}
+            className="h-8 w-8 p-0"
+            title="Code"
+          >
+            <Code className="h-4 w-4" />
+          </Button>
+
+          <div className="h-6 w-px bg-border mx-2" />
+
+          {/* Write with AI Dropdown */}
+          {state.admin_config.features.write_with_ai && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 gap-1">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-xs">Write with AI</span>
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {['Rephrase', 'More formal', 'Less formal', 'Expand', 'Brand tone', 'My style'].map(action => (
+                  <DropdownMenuItem
+                    key={action}
+                    onClick={() => handleAIAction(action)}
+                    disabled={!draft}
+                  >
+                    <Sparkles className="h-3 w-3 mr-2" />
+                    {action}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Reply Suggester Sources Dropdown */}
+          {state.admin_config.features.reply_suggester && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 gap-1">
+                  <span className="text-xs">🔍 Sources</span>
+                  <span className="text-xs opacity-60">
+                    ({Object.values(selectedSources).filter(Boolean).length}/3)
+                  </span>
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {[
+                  { key: 'solution_articles', label: 'Solution Articles' },
+                  { key: 'similar_tickets', label: 'Similar Tickets' },
+                  { key: 'canned_responses', label: 'Canned Responses' },
+                ].map(source => {
+                  const adminEnabled = state.admin_config.reply_suggester_sources[source.key as keyof typeof state.admin_config.reply_suggester_sources];
+                  const isDisabled = !adminEnabled;
+                  
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={source.key}
+                      checked={selectedSources[source.key as keyof typeof selectedSources]}
+                      disabled={isDisabled}
+                      onCheckedChange={(checked) => {
+                        if (!isDisabled) {
+                          setSelectedSources(prev => ({
+                            ...prev,
+                            [source.key]: checked as boolean
+                          }));
+                          toast.info(`${source.label} ${checked ? 'enabled' : 'disabled'}`);
+                        }
+                      }}
+                    >
+                      {source.label}
+                      {isDisabled && <span className="text-muted-foreground ml-1 text-xs">(Disabled)</span>}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          <div className="flex-1" />
+
+          {/* Verify Button */}
+          {state.admin_config.features.reply_verifier && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={runVerifier}
+              className="h-8"
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              <span className="text-xs">Verify</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Textarea */}
+        <div className="space-y-2">
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => handleDraftChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your reply here..."
+              className="min-h-[100px] resize-none pr-12"
+            />
+            {state.liveSuggestion && (
+              <div className="absolute left-3 top-3 right-12 bottom-3 pointer-events-none overflow-hidden">
+                <span className="text-muted-foreground/40 whitespace-pre-wrap break-words">
+                  {draft}
+                  <span className="text-muted-foreground/60">{state.liveSuggestion}</span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Verifier Dialog */}
+        {/* Tab hint & Send button */}
+        <div className="flex items-center justify-between mt-3">
+          {state.liveSuggestion ? (
+            <p className="text-xs text-muted-foreground">
+              Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Tab</kbd> to accept suggestion
+            </p>
+          ) : (
+            <div />
+          )}
+          <Button onClick={handleSend} disabled={!draft.trim()}>
+            <Send className="h-4 w-4 mr-2" />
+            Send Reply
+          </Button>
+        </div>
+      </div>
       <AlertDialog open={showVerifier} onOpenChange={setShowVerifier}>
         <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
           <AlertDialogHeader>
@@ -581,109 +814,6 @@ export const ConversationPanel = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Reply Editor */}
-      <div className="border-t border-border p-4">
-        {/* Source Filter */}
-        {state.admin_config.features.reply_suggester && (
-          <div className="mb-3 p-3 bg-muted/30 rounded-lg border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Filter className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Reply Suggester Sources</span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { key: 'solution_articles', label: 'Solution Articles' },
-                { key: 'similar_tickets', label: 'Similar Tickets' },
-                { key: 'canned_responses', label: 'Canned Responses' },
-              ].map(source => {
-                const adminEnabled = state.admin_config.reply_suggester_sources[source.key as keyof typeof state.admin_config.reply_suggester_sources];
-                const isDisabled = !adminEnabled;
-                
-                return (
-                  <div
-                    key={source.key}
-                    className={cn(
-                      "flex items-center gap-2",
-                      isDisabled && "opacity-40 cursor-not-allowed"
-                    )}
-                  >
-                    <Checkbox
-                      id={source.key}
-                      checked={selectedSources[source.key as keyof typeof selectedSources]}
-                      disabled={isDisabled}
-                      onCheckedChange={(checked) => {
-                        if (!isDisabled) {
-                          setSelectedSources(prev => ({
-                            ...prev,
-                            [source.key]: checked as boolean
-                          }));
-                          toast.info(`${source.label} ${checked ? 'enabled' : 'disabled'}`);
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor={source.key}
-                      className={cn(
-                        "text-xs font-medium cursor-pointer",
-                        isDisabled && "cursor-not-allowed"
-                      )}
-                    >
-                      {source.label}
-                      {isDisabled && <span className="text-muted-foreground ml-1">(Admin disabled)</span>}
-                    </label>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <label className="text-sm text-muted-foreground">Type your reply here...</label>
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              value={draft}
-              onChange={(e) => handleDraftChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder=""
-              className="min-h-[100px] resize-none pr-12"
-            />
-            {state.liveSuggestion && (
-              <div className="absolute left-3 top-3 right-12 bottom-3 pointer-events-none overflow-hidden">
-                <span className="text-muted-foreground/40 whitespace-pre-wrap break-words">
-                  {draft}
-                  <span className="text-muted-foreground/60">{state.liveSuggestion}</span>
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-        {state.liveSuggestion && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Tab</kbd> to accept suggestion
-          </p>
-        )}
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex gap-2">
-            {state.admin_config.features.reply_verifier && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={runVerifier}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Verify
-              </Button>
-            )}
-          </div>
-          <Button onClick={handleSend} disabled={!draft.trim()}>
-            <Send className="h-4 w-4 mr-2" />
-            Send Reply
-          </Button>
-        </div>
-      </div>
     </Card>
   );
 };

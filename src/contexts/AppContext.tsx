@@ -112,6 +112,7 @@ interface AppState {
   admin_config: AdminConfig;
   activeTicket: Ticket | null;
   liveSuggestion: string;
+  contextPanelVisible: boolean;
   filters: {
     status: string;
     sentiment: string;
@@ -123,6 +124,7 @@ interface AppContextType {
   state: AppState;
   setActiveTicket: (ticket: Ticket | null) => void;
   setLiveSuggestion: (suggestion: string) => void;
+  setContextPanelVisible: (visible: boolean) => void;
   addTelemetryEvent: (event: TelemetryEvent) => void;
   updateAdminConfig: (config: Partial<AdminConfig>) => void;
   addTicket: (ticket: Ticket) => void;
@@ -432,6 +434,7 @@ const initialState: AppState = {
   },
   activeTicket: null,
   liveSuggestion: '',
+  contextPanelVisible: true,
   filters: {
     status: 'all',
     sentiment: 'all',
@@ -448,6 +451,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const setLiveSuggestion = (suggestion: string) => {
     setState(prev => ({ ...prev, liveSuggestion: suggestion }));
+  };
+
+  const setContextPanelVisible = (visible: boolean) => {
+    setState(prev => ({ ...prev, contextPanelVisible: visible }));
   };
 
   const addTelemetryEvent = (event: TelemetryEvent) => {
@@ -510,6 +517,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       state,
       setActiveTicket,
       setLiveSuggestion,
+      setContextPanelVisible,
       addTelemetryEvent,
       updateAdminConfig,
       addTicket,
