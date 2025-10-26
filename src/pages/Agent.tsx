@@ -7,7 +7,7 @@ const Agent = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      <div className="flex-1 grid grid-cols-[280px_1fr_360px] gap-4 p-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-[280px_1fr_360px] gap-4 p-4">
         <TicketList />
         <ConversationPanel />
         <ContextPanel />
