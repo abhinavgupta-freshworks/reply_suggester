@@ -53,6 +53,7 @@ export const ConversationPanel = () => {
     canned_responses: true,
   });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +63,71 @@ export const ConversationPanel = () => {
     }
   }, [state.activeTicket?.messages]);
 
+  // Generate multiple suggestions based on sources
+  const generateSuggestions = (): string[] => {
+    if (!state.activeTicket) return [];
+
+    const availableSources = {
+      solution_articles: selectedSources.solution_articles && state.admin_config.reply_suggester_sources.solution_articles,
+      similar_tickets: selectedSources.similar_tickets && state.admin_config.reply_suggester_sources.similar_tickets,
+      canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
+    };
+
+    const hasAnySources = availableSources.solution_articles || availableSources.similar_tickets || availableSources.canned_responses;
+    if (!hasAnySources) return [];
+
+    const suggestions: string[] = [];
+    const lastCustomerMsg = state.activeTicket.messages
+      .filter(m => m.from === 'customer')
+      .slice(-1)[0];
+    const customerName = state.activeTicket.customer.name;
+    const subject = state.activeTicket.subject.toLowerCase();
+
+    if (availableSources.solution_articles) {
+      if (lastCustomerMsg?.text.toLowerCase().includes('login') || lastCustomerMsg?.text.toLowerCase().includes('password')) {
+        suggestions.push(`Hi ${customerName}, I can help you with your login issue. Please try resetting your password using the forgot password link.`);
+      } else {
+        suggestions.push(`Hi ${customerName}, based on our knowledge base, here's how to resolve this issue...`);
+      }
+    }
+
+    if (availableSources.similar_tickets) {
+      suggestions.push(`We've seen similar cases before. Let me help you with this ${subject}.`);
+    }
+
+    if (availableSources.canned_responses) {
+      suggestions.push(`Thank you for reaching out. I'll assist you with ${subject} right away.`);
+    }
+
+    // Fallback if no specific suggestions
+    if (suggestions.length === 0) {
+      suggestions.push(`Hi ${customerName}, thanks for contacting us. I'm looking into your issue regarding ${subject}.`);
+    }
+
+    return suggestions.slice(0, 3);
+  };
+
+  const generateInitialSuggestion = () => {
+    if (!state.activeTicket) return;
+
+    const newSuggestions = generateSuggestions();
+    setSuggestions(newSuggestions);
+    
+    // Set first suggestion as live suggestion for the textarea
+    if (newSuggestions.length > 0) {
+      setLiveSuggestion(newSuggestions[0]);
+    } else {
+      setLiveSuggestion('');
+    }
+    
+    // Track suggestion generation
+    addTelemetryEvent({
+      event: 'reply_suggester_generated',
+      ticketId: state.activeTicket.id,
+      agentId: 'agent_1'
+    });
+  };
+
   // Auto-generate initial suggestion when ticket changes
   useEffect(() => {
     if (state.activeTicket && state.admin_config.features.reply_suggester && !draft) {
@@ -70,15 +136,19 @@ export const ConversationPanel = () => {
     }
   }, [state.activeTicket?.id]);
 
-  // Update suggestion when sources change
+  // Update suggestions when sources change
   useEffect(() => {
     if (!state.activeTicket || !state.admin_config.features.reply_suggester) return;
 
-    // Clear current suggestion and regenerate based on selection and current draft
-    setLiveSuggestion('');
-    const hasDraft = !!draft.trim();
-    if (!hasDraft) {
-      generateInitialSuggestion();
+    // Regenerate suggestions based on new source selection
+    const newSuggestions = generateSuggestions();
+    setSuggestions(newSuggestions);
+    
+    // Update live suggestion in textarea
+    if (!draft.trim() && newSuggestions.length > 0) {
+      setLiveSuggestion(newSuggestions[0]);
+    } else if (!draft.trim()) {
+      setLiveSuggestion('');
     } else {
       generateLiveSuggestion(draft);
     }
@@ -91,54 +161,6 @@ export const ConversationPanel = () => {
       sources: selectedSources,
     });
   }, [selectedSources]);
-
-  const generateInitialSuggestion = () => {
-    if (!state.activeTicket) return;
-
-    const availableSources = {
-      solution_articles: selectedSources.solution_articles && state.admin_config.reply_suggester_sources.solution_articles,
-      similar_tickets: selectedSources.similar_tickets && state.admin_config.reply_suggester_sources.similar_tickets,
-      canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
-    };
-
-    // Don't generate if no sources are selected
-    const hasAnySources = availableSources.solution_articles || availableSources.similar_tickets || availableSources.canned_responses;
-    if (!hasAnySources) {
-      setLiveSuggestion('');
-      return;
-    }
-
-    const lastCustomerMsg = state.activeTicket.messages
-      .filter(m => m.from === 'customer')
-      .slice(-1)[0];
-
-    let suggestion = '';
-
-    if (!lastCustomerMsg) {
-      suggestion = 'Hi, thanks for reaching out. How can I help you today?';
-    } else {
-      const lower = lastCustomerMsg.text.toLowerCase();
-      
-      if (availableSources.solution_articles && (lower.includes('login') || lower.includes('password'))) {
-        suggestion = 'Hi, thanks for contacting us. I can help you with your login issue. Please try resetting your password using the forgot password link.';
-      } else if (availableSources.canned_responses && lower.includes('refund')) {
-        suggestion = 'Hi, I understand you need a refund. I can help you with that. Refunds typically take 5-7 business days to process.';
-      } else if (availableSources.similar_tickets && (lower.includes('shipping') || lower.includes('delivery'))) {
-        suggestion = 'Hi, thanks for reaching out about your delivery. Let me check the status of your shipment for you.';
-      } else {
-        suggestion = `Hi ${state.activeTicket.customer.name}, thanks for contacting us. I'm looking into your issue regarding ${state.activeTicket.subject.toLowerCase()}.`;
-      }
-    }
-
-    setLiveSuggestion(suggestion);
-    
-    // Track suggestion generation
-    addTelemetryEvent({
-      event: 'reply_suggester_generated',
-      ticketId: state.activeTicket.id,
-      agentId: 'agent_1'
-    });
-  };
 
   const generateLiveSuggestion = (text: string) => {
     if (!text || text.endsWith(' ')) {
@@ -563,8 +585,42 @@ export const ConversationPanel = () => {
         </div>
       </div>
 
-      {/* AI Toolbar & Reply Editor - Compact */}
-      <div className="sticky bottom-0 z-10 border-t border-border bg-background p-4 shrink-0 min-h-[220px]">
+      {/* AI Toolbar & Reply Editor - Fixed Height */}
+      <div className="border-t border-border bg-background p-4 shrink-0 min-h-[280px]">
+        {/* Suggested Replies Strip */}
+        {state.admin_config.features.reply_suggester && suggestions.length > 0 && (
+          <div className="mb-3 pb-3 border-b border-border">
+            <p className="text-xs text-muted-foreground mb-2">Suggested replies:</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion, idx) => (
+                <Button
+                  key={idx}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!draft.trim()) {
+                      setDraft(suggestion);
+                    } else {
+                      setDraft(draft + '\n\n' + suggestion);
+                    }
+                    addTelemetryEvent({
+                      event: 'suggestion_clicked',
+                      ticketId: state.activeTicket?.id,
+                      suggestionIndex: idx,
+                      agentId: 'agent_1'
+                    });
+                    toast.success('Suggestion inserted');
+                  }}
+                  className="text-xs h-auto py-1.5 px-3 hover:bg-primary/10 hover:border-primary/50"
+                  title={suggestion}
+                >
+                  <span className="line-clamp-1">{suggestion.substring(0, 60)}{suggestion.length > 60 ? '...' : ''}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Formatting & AI Toolbar */}
         <div className="flex items-center gap-1 mb-3 pb-3 border-b border-border">
           {/* Text Formatting Buttons */}

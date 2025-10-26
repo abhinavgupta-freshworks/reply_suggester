@@ -11,7 +11,7 @@ const Agent = () => {
   const { state, setContextPanelVisible } = useAppContext();
 
   return (
-    <div className="flex min-h-screen bg-background overflow-y-auto">
+    <div className="flex min-h-screen bg-background overflow-hidden">
       <Sidebar />
       <div className={cn(
         "flex-1 min-h-0 h-screen grid gap-4 p-4 overflow-hidden",

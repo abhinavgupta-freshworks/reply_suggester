@@ -105,7 +105,7 @@ export const ContextPanel = () => {
   };
 
   return (
-    <Card className="flex h-full min-h-0 flex-col p-4">
+    <Card className="flex h-full min-h-0 flex-col overflow-hidden p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Context & KB</h2>
         <Button
