@@ -2,10 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
-import { Sparkles, Send, CheckCircle, AlertTriangle, Filter } from 'lucide-react';
+import { Sparkles, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -16,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Checkbox } from './ui/checkbox';
+import { CompactAIComposer } from './CompactAIComposer';
 
 const sentimentEmoji: Record<string, string> = {
   happy: '😀',
@@ -34,17 +33,10 @@ interface VerifierFlag {
 
 export const ConversationPanel = () => {
   const { state, addMessage, addTelemetryEvent, setLiveSuggestion } = useAppContext();
-  const [draft, setDraft] = useState('');
   const [verifierFlags, setVerifierFlags] = useState<VerifierFlag[]>([]);
   const [showVerifier, setShowVerifier] = useState(false);
   const [suggestedFix, setSuggestedFix] = useState('');
-  const [selectedSources, setSelectedSources] = useState({
-    solution_articles: true,
-    similar_tickets: true,
-    canned_responses: true,
-  });
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [currentDraft, setCurrentDraft] = useState(''); // Store draft for verifier dialog
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,101 +45,8 @@ export const ConversationPanel = () => {
     }
   }, [state.activeTicket?.messages]);
 
-  // Auto-generate initial suggestion when ticket changes
-  useEffect(() => {
-    if (state.activeTicket && state.admin_config.features.reply_suggester && !draft) {
-      setIsInitialLoad(true);
-      generateInitialSuggestion();
-    }
-  }, [state.activeTicket?.id]);
-
-  // Update suggestion when sources change
-  useEffect(() => {
-    if (state.activeTicket && state.admin_config.features.reply_suggester && !isInitialLoad) {
-      // Clear current suggestion and regenerate
-      setLiveSuggestion('');
-      if (!draft) {
-        generateInitialSuggestion();
-      } else {
-        generateLiveSuggestion(draft);
-      }
-      // Track suggestion regeneration only when user manually changes sources
-      addTelemetryEvent({
-        event: 'reply_suggester_generated',
-        ticketId: state.activeTicket.id,
-        agentId: 'agent_1'
-      });
-    }
-    // Mark that initial load is complete
-    if (isInitialLoad) {
-      setIsInitialLoad(false);
-    }
-  }, [selectedSources]);
-
-  const generateInitialSuggestion = () => {
-    if (!state.activeTicket) return;
-
-    const availableSources = {
-      solution_articles: selectedSources.solution_articles && state.admin_config.reply_suggester_sources.solution_articles,
-      similar_tickets: selectedSources.similar_tickets && state.admin_config.reply_suggester_sources.similar_tickets,
-      canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
-    };
-
-    // Don't generate if no sources are selected
-    const hasAnySources = availableSources.solution_articles || availableSources.similar_tickets || availableSources.canned_responses;
-    if (!hasAnySources) {
-      setLiveSuggestion('');
-      return;
-    }
-
-    const lastCustomerMsg = state.activeTicket.messages
-      .filter(m => m.from === 'customer')
-      .slice(-1)[0];
-
-    let suggestion = '';
-
-    if (!lastCustomerMsg) {
-      suggestion = 'Hi, thanks for reaching out. How can I help you today?';
-    } else {
-      const lower = lastCustomerMsg.text.toLowerCase();
-      
-      if (availableSources.solution_articles && (lower.includes('login') || lower.includes('password'))) {
-        suggestion = 'Hi, thanks for contacting us. I can help you with your login issue. Please try resetting your password using the forgot password link.';
-      } else if (availableSources.canned_responses && lower.includes('refund')) {
-        suggestion = 'Hi, I understand you need a refund. I can help you with that. Refunds typically take 5-7 business days to process.';
-      } else if (availableSources.similar_tickets && (lower.includes('shipping') || lower.includes('delivery'))) {
-        suggestion = 'Hi, thanks for reaching out about your delivery. Let me check the status of your shipment for you.';
-      } else {
-        suggestion = `Hi ${state.activeTicket.customer.name}, thanks for contacting us. I'm looking into your issue regarding ${state.activeTicket.subject.toLowerCase()}.`;
-      }
-    }
-
-    setLiveSuggestion(suggestion);
-    
-    // Track suggestion generation
-    addTelemetryEvent({
-      event: 'reply_suggester_generated',
-      ticketId: state.activeTicket.id,
-      agentId: 'agent_1'
-    });
-  };
-
   const generateLiveSuggestion = (text: string) => {
     if (!text || text.endsWith(' ')) {
-      setLiveSuggestion('');
-      return;
-    }
-
-    // Check which sources are available
-    const availableSources = {
-      solution_articles: selectedSources.solution_articles && state.admin_config.reply_suggester_sources.solution_articles,
-      similar_tickets: selectedSources.similar_tickets && state.admin_config.reply_suggester_sources.similar_tickets,
-      canned_responses: selectedSources.canned_responses && state.admin_config.reply_suggester_sources.canned_responses,
-    };
-
-    // Don't generate if no sources are selected
-    const hasAnySources = availableSources.solution_articles || availableSources.similar_tickets || availableSources.canned_responses;
-    if (!hasAnySources) {
       setLiveSuggestion('');
       return;
     }
@@ -155,11 +54,11 @@ export const ConversationPanel = () => {
     const lower = text.toLowerCase();
     let suggestion = '';
 
-    if (availableSources.solution_articles && lower.endsWith('login')) {
+    if (lower.endsWith('login')) {
       suggestion = ' please try resetting your password.';
-    } else if (availableSources.canned_responses && lower.endsWith('refund')) {
+    } else if (lower.endsWith('refund')) {
       suggestion = ' refunds take 5-7 business days.';
-    } else if (availableSources.similar_tickets && (lower.endsWith('hi') || lower.endsWith('hello'))) {
+    } else if (lower.endsWith('hi') || lower.endsWith('hello')) {
       suggestion = ' thanks for contacting us.';
     } else if (lower.endsWith('thanks')) {
       suggestion = ' you are welcome!';
@@ -168,90 +67,8 @@ export const ConversationPanel = () => {
     setLiveSuggestion(suggestion);
   };
 
-  const handleDraftChange = (text: string) => {
-    setDraft(text);
-    if (state.admin_config.features.reply_suggester) {
-      generateLiveSuggestion(text);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Tab' && state.liveSuggestion) {
-      e.preventDefault();
-      setDraft(draft + state.liveSuggestion);
-      setLiveSuggestion('');
-      addTelemetryEvent({
-        event: 'reply_suggester_accepted',
-        ticketId: state.activeTicket?.id
-      });
-    }
-  };
-
-  const handleAIAction = (action: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = draft.substring(start, end);
-    const textToTransform = selectedText || draft;
-
-    if (!textToTransform) {
-      toast.info('Please type some text first');
-      return;
-    }
-
-    let result = '';
-    const name = state.activeTicket?.customer.name || 'Customer';
-
-    switch (action) {
-      case 'Rephrase':
-        result = `${textToTransform.replace(/very/g, 'extremely').replace(/good/g, 'excellent')}`;
-        break;
-      case 'More formal':
-        result = `${textToTransform.replace(/can't/g, 'cannot').replace(/I'm/g, 'I am').replace(/won't/g, 'will not')}`;
-        break;
-      case 'Less formal':
-        result = `${textToTransform.replace(/I am/g, "I'm").replace(/cannot/g, "can't").replace(/will not/g, "won't")}`;
-        break;
-      case 'Expand':
-        result = `${textToTransform} Additionally, if you need any further assistance with this matter, please don't hesitate to reach out.`;
-        break;
-      case 'Brand tone':
-        const archetype = state.admin_config.brand_voice.archetype || 'Friendly';
-        result = `Hi ${name} — thanks for reaching out. ${textToTransform} [Applied ${archetype} brand tone]`;
-        break;
-      case 'My style':
-        result = `${textToTransform} [Applied your personal writing style]`;
-        break;
-    }
-
-    if (selectedText) {
-      // Replace only selected text
-      const newDraft = draft.substring(0, start) + result + draft.substring(end);
-      setDraft(newDraft);
-      // Set cursor position after the replaced text
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + result.length, start + result.length);
-      }, 0);
-    } else {
-      // Replace entire text
-      setDraft(result);
-    }
-
-    setLiveSuggestion('');
-    addTelemetryEvent({
-      event: 'write_with_ai_used',
-      action,
-      ticketId: state.activeTicket?.id,
-      agentId: 'agent_1'
-    });
-    toast.success(`Applied: ${action}`);
-  };
-
-  const generateSuggestedFix = (flags: VerifierFlag[]): string => {
-    let fixedDraft = draft;
+  const generateSuggestedFix = (flags: VerifierFlag[], draftText: string): string => {
+    let fixedDraft = draftText;
 
     flags.forEach(flag => {
       switch (flag.type) {
@@ -276,12 +93,13 @@ export const ConversationPanel = () => {
     return fixedDraft;
   };
 
-  const runVerifier = (): boolean => {
+  const runVerifier = (draftText: string): boolean => {
+    setCurrentDraft(draftText); // Store for dialog display
     const flags: VerifierFlag[] = [];
 
     // PII detection
-    if (/\d{12,}/.test(draft)) {
-      const match = draft.match(/\d{12,}/);
+    if (/\d{12,}/.test(draftText)) {
+      const match = draftText.match(/\d{12,}/);
       if (match) {
         flags.push({
           type: 'PII',
@@ -293,10 +111,10 @@ export const ConversationPanel = () => {
     }
 
     // Internal links
-    if (draft.includes('staging.') || draft.includes('internal.example.com')) {
+    if (draftText.includes('staging.') || draftText.includes('internal.example.com')) {
       const links = [];
-      if (draft.includes('staging.')) links.push('staging.*');
-      if (draft.includes('internal.example.com')) links.push('internal.example.com');
+      if (draftText.includes('staging.')) links.push('staging.*');
+      if (draftText.includes('internal.example.com')) links.push('internal.example.com');
       flags.push({
         type: 'INTERNAL_LINK',
         text: links.join(', '),
@@ -307,7 +125,7 @@ export const ConversationPanel = () => {
 
     // Required phrases
     state.admin_config.verifier_rules.required_phrases.forEach(phrase => {
-      if (!draft.includes(phrase)) {
+      if (!draftText.includes(phrase)) {
         flags.push({
           type: 'REQUIRED_PHRASE',
           text: phrase,
@@ -320,7 +138,7 @@ export const ConversationPanel = () => {
     // Repetitive check
     const prevAgentMsgs = state.activeTicket?.messages.filter(m => m.from === 'agent').map(m => m.text) || [];
     prevAgentMsgs.forEach(pm => {
-      if (pm && draft.includes(pm)) {
+      if (pm && draftText.includes(pm)) {
         flags.push({
           type: 'REPETITIVE',
           text: pm.slice(0, 50) + '...',
@@ -331,7 +149,7 @@ export const ConversationPanel = () => {
     });
 
     if (flags.length > 0) {
-      setSuggestedFix(generateSuggestedFix(flags));
+      setSuggestedFix(generateSuggestedFix(flags, draftText));
     }
 
     setVerifierFlags(flags);
@@ -353,13 +171,14 @@ export const ConversationPanel = () => {
 
   const handleSendAnyway = () => {
     setShowVerifier(false);
-    proceedWithSend(draft);
+    proceedWithSend(currentDraft);
   };
 
   const handleApplyFix = () => {
-    setDraft(suggestedFix);
+    // Note: This would need to update the draft in CompactAIComposer
+    // For now, just close the dialog and let user manually apply changes
     setShowVerifier(false);
-    toast.success('Applied suggested fixes');
+    toast.info('Please review and apply the suggested changes manually');
   };
 
   const proceedWithSend = (text: string) => {
@@ -382,24 +201,10 @@ export const ConversationPanel = () => {
       agentId: 'agent_1'
     });
 
-    setDraft('');
     setLiveSuggestion('');
     setShowVerifier(false);
     setVerifierFlags([]);
     toast.success('Reply sent');
-  };
-
-  const handleSend = () => {
-    if (!draft.trim() || !state.activeTicket) return;
-
-    if (state.admin_config.features.reply_verifier) {
-      const canSend = runVerifier();
-      if (!canSend) {
-        return; // Modal will show, user can choose to send anyway or fix
-      }
-    }
-
-    proceedWithSend(draft);
   };
 
   const handleSummarize = () => {
@@ -485,34 +290,6 @@ export const ConversationPanel = () => {
         </div>
       </ScrollArea>
 
-      {/* AI Toolbar - Write with AI */}
-      {state.admin_config.features.write_with_ai && (
-        <div className="border-t border-border bg-muted/30 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Write with AI</span>
-            <span className="text-xs text-muted-foreground ml-auto">
-              {draft ? 'Select text or apply to all' : 'Type to enable'}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {['Rephrase', 'More formal', 'Less formal', 'Expand', 'Brand tone', 'My style'].map(action => (
-              <Button
-                key={action}
-                variant="outline"
-                size="sm"
-                onClick={() => handleAIAction(action)}
-                disabled={!draft}
-                className="text-xs"
-              >
-                <Sparkles className="h-3 w-3 mr-1" />
-                {action}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Verifier Dialog */}
       <AlertDialog open={showVerifier} onOpenChange={setShowVerifier}>
         <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
@@ -566,7 +343,7 @@ export const ConversationPanel = () => {
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-muted-foreground">Your Original Reply:</h4>
               <div className="bg-muted/50 rounded-lg p-3 border border-border">
-                <p className="text-sm whitespace-pre-wrap text-muted-foreground">{draft}</p>
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">{currentDraft}</p>
               </div>
             </div>
           </div>
@@ -582,107 +359,18 @@ export const ConversationPanel = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reply Editor */}
-      <div className="border-t border-border p-4">
-        {/* Source Filter */}
-        {state.admin_config.features.reply_suggester && (
-          <div className="mb-3 p-3 bg-muted/30 rounded-lg border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Filter className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Reply Suggester Sources</span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { key: 'solution_articles', label: 'Solution Articles' },
-                { key: 'similar_tickets', label: 'Similar Tickets' },
-                { key: 'canned_responses', label: 'Canned Responses' },
-              ].map(source => {
-                const adminEnabled = state.admin_config.reply_suggester_sources[source.key as keyof typeof state.admin_config.reply_suggester_sources];
-                const isDisabled = !adminEnabled;
-                
-                return (
-                  <div
-                    key={source.key}
-                    className={cn(
-                      "flex items-center gap-2",
-                      isDisabled && "opacity-40 cursor-not-allowed"
-                    )}
-                  >
-                    <Checkbox
-                      id={source.key}
-                      checked={selectedSources[source.key as keyof typeof selectedSources]}
-                      disabled={isDisabled}
-                      onCheckedChange={(checked) => {
-                        if (!isDisabled) {
-                          setSelectedSources(prev => ({
-                            ...prev,
-                            [source.key]: checked as boolean
-                          }));
-                          toast.info(`${source.label} ${checked ? 'enabled' : 'disabled'}`);
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor={source.key}
-                      className={cn(
-                        "text-xs font-medium cursor-pointer",
-                        isDisabled && "cursor-not-allowed"
-                      )}
-                    >
-                      {source.label}
-                      {isDisabled && <span className="text-muted-foreground ml-1">(Admin disabled)</span>}
-                    </label>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <label className="text-sm text-muted-foreground">Type your reply here...</label>
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              value={draft}
-              onChange={(e) => handleDraftChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder=""
-              className="min-h-[100px] resize-none pr-12"
-            />
-            {state.liveSuggestion && (
-              <div className="absolute left-3 top-3 right-12 bottom-3 pointer-events-none overflow-hidden">
-                <span className="text-muted-foreground/40 whitespace-pre-wrap break-words">
-                  {draft}
-                  <span className="text-muted-foreground/60">{state.liveSuggestion}</span>
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-        {state.liveSuggestion && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs">Tab</kbd> to accept suggestion
-          </p>
-        )}
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex gap-2">
-            {state.admin_config.features.reply_verifier && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={runVerifier}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Verify
-              </Button>
-            )}
-          </div>
-          <Button onClick={handleSend} disabled={!draft.trim()}>
-            <Send className="h-4 w-4 mr-2" />
-            Send Reply
-          </Button>
-        </div>
+      {/* Compact AI Composer */}
+      <div className="p-4">
+        <CompactAIComposer
+          ticketId={state.activeTicket.id}
+          customerName={state.activeTicket.customer.name}
+          ticketSubject={state.activeTicket.subject}
+          onSend={proceedWithSend}
+          onVerify={runVerifier}
+          showVerify={state.admin_config.features.reply_verifier}
+          liveSuggestion={state.liveSuggestion}
+          onSuggestionChange={generateLiveSuggestion}
+        />
       </div>
     </Card>
   );
