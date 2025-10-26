@@ -278,9 +278,21 @@ export const CompactAIComposer = ({
       description: 'Reply suggester sources have been updated',
     });
 
-    // Regenerate suggestion with new sources
-    if (onSuggestionChange && draft) {
-      onSuggestionChange(draft);
+    // Force regenerate suggestions with new sources
+    // Clear current suggestion first, then regenerate
+    if (onSuggestionChange) {
+      const hasAnySources = selectedSources.solution_articles || 
+                           selectedSources.similar_tickets || 
+                           selectedSources.canned_responses || 
+                           selectedSources.external_kb;
+      
+      if (!hasAnySources) {
+        // No sources selected - clear all suggestions
+        onSuggestionChange('');
+      } else if (draft) {
+        // Has sources and draft text - regenerate suggestion
+        onSuggestionChange(draft);
+      }
     }
   };
 
@@ -332,8 +344,18 @@ export const CompactAIComposer = ({
     const newDraft = e.target.value;
     setDraft(newDraft);
     
+    // Only generate suggestions if at least one source is selected
+    const hasAnySources = selectedSources.solution_articles || 
+                         selectedSources.similar_tickets || 
+                         selectedSources.canned_responses || 
+                         selectedSources.external_kb;
+    
     if (onSuggestionChange) {
-      onSuggestionChange(newDraft);
+      if (hasAnySources) {
+        onSuggestionChange(newDraft);
+      } else {
+        onSuggestionChange(''); // Clear suggestions if no sources
+      }
     }
   };
 
@@ -341,10 +363,23 @@ export const CompactAIComposer = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab' && liveSuggestion) {
       e.preventDefault();
-      setDraft(draft + liveSuggestion);
+      const newDraft = draft + liveSuggestion;
+      setDraft(newDraft);
+      
+      // Clear suggestion after accepting
       if (onSuggestionChange) {
-        onSuggestionChange('');
+        onSuggestionChange(''); // This will clear the liveSuggestion in parent
       }
+
+      addTelemetryEvent({
+        event: 'reply_suggester_accepted',
+        ticketId,
+      });
+
+      // Focus back on textarea
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
     }
   };
 
@@ -387,13 +422,31 @@ export const CompactAIComposer = ({
     },
   ], true);
 
-  // Load default sources
+  // Load default sources on mount
   useEffect(() => {
     const saved = localStorage.getItem('reply_sources_default');
     if (saved) {
       setSelectedSources(JSON.parse(saved));
     }
   }, []);
+
+  // Regenerate suggestions when sources change
+  useEffect(() => {
+    const hasAnySources = selectedSources.solution_articles || 
+                         selectedSources.similar_tickets || 
+                         selectedSources.canned_responses || 
+                         selectedSources.external_kb;
+    
+    if (onSuggestionChange) {
+      if (!hasAnySources) {
+        // No sources - clear suggestions
+        onSuggestionChange('');
+      } else if (draft) {
+        // Has sources and text - regenerate
+        onSuggestionChange(draft);
+      }
+    }
+  }, [selectedSources]);
 
   const placeholder = `Hi ${customerName}, thanks for contacting us. I'm looking into your issue regarding ${ticketSubject}.`;
 
