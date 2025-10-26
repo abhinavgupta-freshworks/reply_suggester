@@ -2,9 +2,9 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TicketList } from '@/components/TicketList';
 import { ConversationPanel } from '@/components/ConversationPanel';
-import { ContextPanel } from '@/components/ContextPanel';
+import { ContextPanelSlider } from '@/components/ContextPanelSlider';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Agent = () => {
@@ -17,28 +17,34 @@ const Agent = () => {
         "flex-1 min-h-0 h-screen grid gap-4 p-4 overflow-hidden",
         state.contextPanelVisible ? "grid-cols-[280px_1fr_360px]" : "grid-cols-[280px_1fr]"
       )}>
-        <TicketList />
-        <div className="relative">
+        <div className="min-w-0">
+          <TicketList />
+        </div>
+        <div className="relative min-w-0">
           <ConversationPanel />
-          {/* Toggle button for Context Panel */}
-          {!state.contextPanelVisible && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="fixed top-1/2 right-2 -translate-y-1/2 h-8 w-8 z-50 shadow"
-              onClick={() => setContextPanelVisible(true)}
-              title="Show Context Panel"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          )}
         </div>
         {state.contextPanelVisible && (
-          <div className="relative">
-            <ContextPanel />
+          <div className="min-w-0">
+            <ContextPanelSlider
+              visible={state.contextPanelVisible}
+              onToggle={() => setContextPanelVisible(!state.contextPanelVisible)}
+            />
           </div>
         )}
       </div>
+      
+      {/* Expand button when context panel is hidden */}
+      {!state.contextPanelVisible && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="fixed top-1/2 right-4 -translate-y-1/2 h-10 w-10 z-50 shadow-lg"
+          onClick={() => setContextPanelVisible(true)}
+          title="Show Context Panel"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
 };
