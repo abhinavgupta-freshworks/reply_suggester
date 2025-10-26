@@ -117,8 +117,29 @@ export const CompactAIComposer = ({
       return;
     }
 
-    // Generate contextual initial suggestion
-    const suggestion = `Hi ${customerName}, thanks for contacting us. I'm looking into your issue regarding ${ticketSubject}.`;
+    // Generate contextual suggestion based on available sources
+    let suggestion = '';
+    
+    if (selectedSources.solution_articles && selectedSources.similar_tickets && selectedSources.canned_responses) {
+      suggestion = `Hi ${customerName}, thanks for contacting us! I've reviewed our knowledge base and similar cases. I'm looking into your request regarding ${ticketSubject}.`;
+    } else if (selectedSources.solution_articles && selectedSources.similar_tickets) {
+      suggestion = `Hi ${customerName}, thanks for reaching out. Based on our documentation and similar tickets, I'm here to help with ${ticketSubject}.`;
+    } else if (selectedSources.solution_articles && selectedSources.canned_responses) {
+      suggestion = `Hi ${customerName}, thank you for contacting us. According to our help articles, I can assist you with ${ticketSubject}.`;
+    } else if (selectedSources.similar_tickets && selectedSources.canned_responses) {
+      suggestion = `Hi ${customerName}, thanks for your message. I've seen similar requests and I'm ready to help with ${ticketSubject}.`;
+    } else if (selectedSources.solution_articles) {
+      suggestion = `Hi ${customerName}, thanks for reaching out. Based on our documentation, I'm looking into ${ticketSubject}.`;
+    } else if (selectedSources.similar_tickets) {
+      suggestion = `Hi ${customerName}, thank you for contacting us. This request has been seen before, and I'm here to help with ${ticketSubject}.`;
+    } else if (selectedSources.canned_responses) {
+      suggestion = `Hi ${customerName}, thank you for your message. I'm looking into your request regarding ${ticketSubject}.`;
+    } else if (selectedSources.external_kb) {
+      suggestion = `Hi ${customerName}, thanks for reaching out. I've consulted our external knowledge sources to help with ${ticketSubject}.`;
+    } else {
+      suggestion = `Hi ${customerName}, thanks for contacting us. I'm looking into your issue regarding ${ticketSubject}.`;
+    }
+
     onSuggestionChange(suggestion);
   };
 
@@ -619,7 +640,7 @@ export const CompactAIComposer = ({
       {/* AI Suggestion Box (shown when no draft and has suggestion) */}
       {liveSuggestion && !draft && (
         <div 
-          className="border border-border rounded-lg p-3 bg-muted/30 cursor-pointer hover:bg-muted/40 transition-colors"
+          className="border border-border rounded-xl p-4 bg-muted/20 cursor-pointer hover:bg-muted/30 transition-all shadow-sm"
           onClick={handleAcceptSuggestion}
           role="button"
           tabIndex={0}
@@ -630,11 +651,27 @@ export const CompactAIComposer = ({
             }
           }}
         >
-          <p className="text-sm leading-relaxed text-foreground">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              AI Suggested Reply
+            </h4>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 -mt-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowSourcesModal(true);
+              }}
+            >
+              <Filter className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <p className="text-base leading-relaxed text-foreground mb-3">
             {liveSuggestion}
           </p>
-          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-xs font-mono">Tab</kbd> to accept suggestion
+          <p className="text-xs mt-1 flex items-center gap-1.5" style={{ color: '#C0C0C0' }}>
+            Press <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-xs font-mono text-foreground">Tab</kbd> to accept this suggestion
           </p>
         </div>
       )}
