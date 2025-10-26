@@ -378,26 +378,35 @@ export const CompactAIComposer = ({
   };
 
   // Handle Tab to accept suggestion
+  const handleAcceptSuggestion = () => {
+    if (!liveSuggestion) return;
+    
+    setDraft(liveSuggestion);
+    
+    // Clear suggestion after accepting
+    if (onSuggestionChange) {
+      onSuggestionChange('');
+    }
+
+    addTelemetryEvent({
+      event: 'reply_suggester_accepted',
+      ticketId,
+    });
+
+    // Focus on textarea
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      // Move cursor to end
+      const len = liveSuggestion.length;
+      textareaRef.current?.setSelectionRange(len, len);
+    }, 0);
+  };
+
+  // Handle Tab to accept suggestion
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Tab' && liveSuggestion) {
+    if (e.key === 'Tab' && liveSuggestion && !draft) {
       e.preventDefault();
-      const newDraft = draft + liveSuggestion;
-      setDraft(newDraft);
-      
-      // Clear suggestion after accepting
-      if (onSuggestionChange) {
-        onSuggestionChange(''); // This will clear the liveSuggestion in parent
-      }
-
-      addTelemetryEvent({
-        event: 'reply_suggester_accepted',
-        ticketId,
-      });
-
-      // Focus back on textarea
-      setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 0);
+      handleAcceptSuggestion();
     }
   };
 
@@ -607,8 +616,31 @@ export const CompactAIComposer = ({
         </div>
       </div>
 
-      {/* Editor with Live Suggestion */}
-      <div className="relative">
+      {/* AI Suggestion Box (shown when no draft and has suggestion) */}
+      {liveSuggestion && !draft && (
+        <div 
+          className="border border-border rounded-lg p-3 bg-muted/30 cursor-pointer hover:bg-muted/40 transition-colors"
+          onClick={handleAcceptSuggestion}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleAcceptSuggestion();
+            }
+          }}
+        >
+          <p className="text-sm leading-relaxed text-foreground">
+            {liveSuggestion}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+            Press <kbd className="px-1.5 py-0.5 rounded bg-background border border-border text-xs font-mono">Tab</kbd> to accept suggestion
+          </p>
+        </div>
+      )}
+
+      {/* Editor (shown when typing or no suggestion) */}
+      {(!liveSuggestion || draft) && (
         <Textarea
           ref={textareaRef}
           value={draft}
@@ -618,20 +650,6 @@ export const CompactAIComposer = ({
           className="min-h-[144px] max-h-[432px] resize-none"
           aria-label="Reply editor"
         />
-        {liveSuggestion && (
-          <div className="absolute inset-0 px-3 py-2 pointer-events-none overflow-hidden">
-            <span className="opacity-0 select-none">{draft}</span>
-            <span className="text-muted-foreground/60 bg-muted/20 px-0.5 rounded">
-              {liveSuggestion}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {liveSuggestion && (
-        <p className="text-xs text-muted-foreground -mt-2" aria-live="polite">
-          Press <kbd className="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">Tab</kbd> to accept suggestion
-        </p>
       )}
 
       {/* Bottom Formatting Toolbar */}
