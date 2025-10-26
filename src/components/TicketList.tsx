@@ -56,7 +56,7 @@ export const TicketList = () => {
   };
 
   return (
-    <Card className="flex h-full min-h-0 flex-col p-4">
+    <Card className="flex h-full flex-col p-4">
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Tickets</h2>
       </div>
@@ -98,7 +98,7 @@ export const TicketList = () => {
         </Select>
       </div>
 
-      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto">
+      <div className="flex-1 space-y-2 overflow-y-auto">
         {filteredTickets.map(ticket => {
           const lastMsg = ticket.messages[ticket.messages.length - 1];
           const isActive = state.activeTicket?.id === ticket.id;
