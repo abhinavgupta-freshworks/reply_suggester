@@ -5,9 +5,9 @@ import { ContextPanel } from '@/components/ContextPanel';
 
 const Agent = () => {
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex min-h-screen bg-background overflow-y-auto">
       <Sidebar />
-      <div className="flex-1 grid grid-cols-[280px_1fr_360px] gap-4 p-4">
+      <div className="flex-1 min-h-0 h-screen grid grid-cols-[280px_1fr_360px] gap-4 p-4 overflow-hidden">
         <TicketList />
         <ConversationPanel />
         <ContextPanel />

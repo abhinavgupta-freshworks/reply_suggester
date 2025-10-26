@@ -427,7 +427,7 @@ export const ConversationPanel = () => {
   }
 
   return (
-    <Card className="flex h-full flex-col p-0">
+    <Card className="flex h-full min-h-0 flex-col p-0">
       {/* Header */}
       <div className="border-b border-border p-4">
         <div className="flex items-start justify-between">
@@ -449,7 +449,7 @@ export const ConversationPanel = () => {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
         <div className="space-y-4">
           {state.activeTicket.messages.map(message => (
             <div
@@ -483,7 +483,7 @@ export const ConversationPanel = () => {
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* AI Toolbar - Write with AI */}
       {state.admin_config.features.write_with_ai && (

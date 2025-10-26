@@ -105,7 +105,7 @@ export const ContextPanel = () => {
   };
 
   return (
-    <Card className="flex h-full flex-col p-4">
+    <Card className="flex h-full min-h-0 flex-col p-4">
       <h2 className="text-lg font-semibold mb-4">Context & KB</h2>
 
       <ScrollArea className="flex-1">
