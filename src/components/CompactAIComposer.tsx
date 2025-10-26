@@ -94,6 +94,7 @@ export const CompactAIComposer = ({
     external_kb: false,
   });
   const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const [hasGeneratedInitial, setHasGeneratedInitial] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -101,6 +102,40 @@ export const CompactAIComposer = ({
 
   // Draft auto-save
   const { clearDraft } = useDraftAutoSave(ticketId, draft, setDraft);
+
+  // Generate initial suggestion when ticket changes or sources change
+  const generateInitialSuggestion = () => {
+    if (!onSuggestionChange) return;
+
+    const hasAnySources = selectedSources.solution_articles || 
+                         selectedSources.similar_tickets || 
+                         selectedSources.canned_responses || 
+                         selectedSources.external_kb;
+    
+    if (!hasAnySources) {
+      onSuggestionChange('');
+      return;
+    }
+
+    // Generate contextual initial suggestion
+    const suggestion = `Hi ${customerName}, thanks for contacting us. I'm looking into your issue regarding ${ticketSubject}.`;
+    onSuggestionChange(suggestion);
+  };
+
+  // Generate initial suggestion when ticket changes
+  useEffect(() => {
+    if (!draft) {
+      generateInitialSuggestion();
+      setHasGeneratedInitial(true);
+    }
+  }, [ticketId]);
+
+  // Regenerate when sources change (only if no draft yet)
+  useEffect(() => {
+    if (!draft) {
+      generateInitialSuggestion();
+    }
+  }, [selectedSources]);
 
   // Handle AI actions
   const handleAIAction = (actionId: string) => {
@@ -277,23 +312,6 @@ export const CompactAIComposer = ({
       title: 'Sources updated',
       description: 'Reply suggester sources have been updated',
     });
-
-    // Force regenerate suggestions with new sources
-    // Clear current suggestion first, then regenerate
-    if (onSuggestionChange) {
-      const hasAnySources = selectedSources.solution_articles || 
-                           selectedSources.similar_tickets || 
-                           selectedSources.canned_responses || 
-                           selectedSources.external_kb;
-      
-      if (!hasAnySources) {
-        // No sources selected - clear all suggestions
-        onSuggestionChange('');
-      } else if (draft) {
-        // Has sources and draft text - regenerate suggestion
-        onSuggestionChange(draft);
-      }
-    }
   };
 
   // Handle send
@@ -429,24 +447,6 @@ export const CompactAIComposer = ({
       setSelectedSources(JSON.parse(saved));
     }
   }, []);
-
-  // Regenerate suggestions when sources change
-  useEffect(() => {
-    const hasAnySources = selectedSources.solution_articles || 
-                         selectedSources.similar_tickets || 
-                         selectedSources.canned_responses || 
-                         selectedSources.external_kb;
-    
-    if (onSuggestionChange) {
-      if (!hasAnySources) {
-        // No sources - clear suggestions
-        onSuggestionChange('');
-      } else if (draft) {
-        // Has sources and text - regenerate
-        onSuggestionChange(draft);
-      }
-    }
-  }, [selectedSources]);
 
   const placeholder = `Hi ${customerName}, thanks for contacting us. I'm looking into your issue regarding ${ticketSubject}.`;
 
