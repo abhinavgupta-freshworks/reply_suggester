@@ -17,7 +17,7 @@ const sentimentEmoji: Record<string, string> = {
 };
 
 export const ConversationPanel = () => {
-  const { state, addMessage, addTelemetryEvent } = useAppContext();
+  const { state, addMessage, addTelemetryEvent, setContextPanelVisible } = useAppContext();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,18 +90,27 @@ export const ConversationPanel = () => {
             <h2 className="text-lg font-semibold">{state.activeTicket.subject}</h2>
             <p className="text-sm text-muted-foreground">{state.activeTicket.customer.name} • {state.activeTicket.customer.email}</p>
           </div>
-          {state.admin_config.features.summarize && (
-            <Button variant="outline" size="sm" onClick={handleSummarize}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Summarize
+          <div className="flex gap-2">
+            {state.admin_config.features.summarize && (
+              <Button variant="outline" size="sm" onClick={handleSummarize}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Summarize
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setContextPanelVisible(!state.contextPanelVisible)}
+            >
+              Context
             </Button>
-          )}
+          </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-4" ref={scrollRef}>
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-4 space-y-4" ref={scrollRef}>
           {state.activeTicket.messages.map(message => (
             <div
               key={message.id}
@@ -134,7 +143,7 @@ export const ConversationPanel = () => {
             </div>
           ))}
         </div>
-      </div>
+      </ScrollArea>
 
       {/* Reply Editor */}
       <ReplyEditor

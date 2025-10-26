@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Sidebar } from '@/components/Sidebar';
 import { TicketList } from '@/components/TicketList';
@@ -8,7 +9,14 @@ import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Agent = () => {
-  const { state, setContextPanelVisible } = useAppContext();
+  const { state, setContextPanelVisible, setActiveTicket } = useAppContext();
+
+  // Auto-select first ticket on mount if none selected
+  useEffect(() => {
+    if (!state.activeTicket && state.tickets.length > 0) {
+      setActiveTicket(state.tickets[0]);
+    }
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-background overflow-hidden">

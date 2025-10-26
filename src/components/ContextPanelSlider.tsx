@@ -4,6 +4,12 @@ import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { BookOpen, MessageSquare, FileText, ChevronRight } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 const sentimentColors: Record<string, string> = {
   happy: 'text-sentiment-happy',
@@ -73,11 +79,11 @@ export const ContextPanelSlider = ({ visible, onToggle }: ContextPanelSliderProp
       <Button
         variant="ghost"
         size="sm"
-        className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-20 rounded-l-lg rounded-r-none bg-muted hover:bg-primary/20 cursor-pointer z-10 px-1"
+        className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-24 rounded-l-lg rounded-r-none bg-muted/90 hover:bg-primary/30 border border-r-0 border-border cursor-pointer z-50 px-1.5 shadow-sm"
         onClick={onToggle}
         title="Hide Context Panel"
       >
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-5 w-5" />
       </Button>
 
       {/* Panel content */}
@@ -87,73 +93,91 @@ export const ContextPanelSlider = ({ visible, onToggle }: ContextPanelSliderProp
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
-            {/* Solution Articles */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 mb-3">
-                <BookOpen className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Solution Articles</span>
-                <Badge variant="secondary" className="ml-1">{kbArticles.length}</Badge>
-              </div>
-              {kbArticles.map(kb => (
-                <div key={kb.id} className="rounded-lg border border-border bg-card p-3">
-                  <p className="text-xs font-mono text-muted-foreground mb-1">{kb.id}</p>
-                  <h4 className="text-sm font-medium mb-1">{kb.title}</h4>
-                  <p className="text-xs text-muted-foreground">{kb.content}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Similar Tickets */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Similar Tickets</span>
-                <Badge variant="secondary" className="ml-1">{similarTickets.length}</Badge>
-              </div>
-              {similarTickets.map(ticket => (
-                <div key={ticket.id} className="rounded-lg border border-border bg-card p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-mono text-muted-foreground">{ticket.id}</p>
-                    <Badge variant="outline" className="text-xs">{ticket.similarity}% match</Badge>
+          <div className="p-4">
+            <Accordion type="multiple" defaultValue={["articles", "tickets", "responses", "sentiment"]} className="space-y-2">
+              {/* Solution Articles */}
+              <AccordionItem value="articles" className="border rounded-lg px-3">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Solution Articles</span>
+                    <Badge variant="secondary" className="ml-1">{kbArticles.length}</Badge>
                   </div>
-                  <h4 className="text-sm font-medium mb-1">{ticket.subject}</h4>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-medium">Resolution:</span> {ticket.resolution}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Canned Responses */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Canned Responses</span>
-                <Badge variant="secondary" className="ml-1">{state.canned_responses.length}</Badge>
-              </div>
-              {state.canned_responses.map(cr => (
-                <div key={cr.id} className="rounded-lg border border-border bg-card p-3 hover:border-primary/50 transition-colors cursor-pointer">
-                  <h4 className="text-sm font-medium mb-1">{cr.title}</h4>
-                  <p className="text-xs text-muted-foreground">{cr.text}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Sentiment Legend */}
-            {state.admin_config.features.sentiment && (
-              <div className="border border-border rounded-lg p-3">
-                <h3 className="text-sm font-medium mb-2">Sentiment Legend</h3>
-                <div className="space-y-1.5">
-                  {Object.entries(sentimentEmoji).map(([key, emoji]) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <span className="text-lg">{emoji}</span>
-                      <span className={`text-sm capitalize ${sentimentColors[key]}`}>{key}</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pb-3">
+                  {kbArticles.map(kb => (
+                    <div key={kb.id} className="rounded-lg border border-border bg-card p-3">
+                      <p className="text-xs font-mono text-muted-foreground mb-1">{kb.id}</p>
+                      <h4 className="text-sm font-medium mb-1">{kb.title}</h4>
+                      <p className="text-xs text-muted-foreground">{kb.content}</p>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Similar Tickets */}
+              <AccordionItem value="tickets" className="border rounded-lg px-3">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Similar Tickets</span>
+                    <Badge variant="secondary" className="ml-1">{similarTickets.length}</Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pb-3">
+                  {similarTickets.map(ticket => (
+                    <div key={ticket.id} className="rounded-lg border border-border bg-card p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-mono text-muted-foreground">{ticket.id}</p>
+                        <Badge variant="outline" className="text-xs">{ticket.similarity}% match</Badge>
+                      </div>
+                      <h4 className="text-sm font-medium mb-1">{ticket.subject}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Resolution:</span> {ticket.resolution}
+                      </p>
+                    </div>
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Canned Responses */}
+              <AccordionItem value="responses" className="border rounded-lg px-3">
+                <AccordionTrigger className="hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Canned Responses</span>
+                    <Badge variant="secondary" className="ml-1">{state.canned_responses.length}</Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pb-3">
+                  {state.canned_responses.map(cr => (
+                    <div key={cr.id} className="rounded-lg border border-border bg-card p-3 hover:border-primary/50 transition-colors cursor-pointer">
+                      <h4 className="text-sm font-medium mb-1">{cr.title}</h4>
+                      <p className="text-xs text-muted-foreground">{cr.text}</p>
+                    </div>
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Sentiment Legend */}
+              {state.admin_config.features.sentiment && (
+                <AccordionItem value="sentiment" className="border rounded-lg px-3">
+                  <AccordionTrigger className="hover:no-underline py-3">
+                    <span className="text-sm font-medium">Sentiment Legend</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="space-y-1.5">
+                      {Object.entries(sentimentEmoji).map(([key, emoji]) => (
+                        <div key={key} className="flex items-center gap-2">
+                          <span className="text-lg">{emoji}</span>
+                          <span className={`text-sm capitalize ${sentimentColors[key]}`}>{key}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+            </Accordion>
           </div>
         </ScrollArea>
       </Card>
